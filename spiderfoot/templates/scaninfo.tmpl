@@ -13,8 +13,11 @@
     statusy = "alert-info"
   end
 %>
+<ol class="breadcrumb" style="margin-bottom: 8px;">
+  <li><a href="${docroot}/">Scans</a></li>
+  <li class="active">${name}</li>
+</ol>
 <h2>${name}&nbsp;<span id='scanstatusbadge' class='badge ${statusy}'>${status}</span>&nbsp;<img id="loader" src="${docroot}/static/img/loader.gif"></h2>
-<div id="sf-scan-banner" class="alert alert-info" style="display:none"></div>
   <div class="btn-toolbar" role="toolbar" style='padding-bottom: 10px'>
    <div class="btn-group">
       <a id='btn-status' class="btn btn-default" onClick='scanSummaryView("${id}")'><i class='glyphicon glyphicon-eye-open'></i>&nbsp;Summary</a>
@@ -189,7 +192,7 @@
                             if (data.length == 0) {
                                 var table = "<div id='scansummary-content'>&nbsp;&nbsp;No results found. Try broadening your search criteria.</div>";
                             } else {
-                                var table = "<div class='table-responsive'><table id='scansummary-content' class='table table-bordered table-striped small tablesorter'><thead><tr>";
+                                var table = "<table id='scansummary-content' class='table table-bordered table-striped small tablesorter'><thead><tr>";
                                 if (typeName == null) {
                                     table += "<th class='sorter-false'>Data Element Type</th>";
                                 }
@@ -209,7 +212,7 @@
                                     table += "</pre></td>";
                                     table += "</tr>";
                                 }
-                                table += "</tbody></table></div>"
+                                table += "</tbody></table>"
                             }
                             $("#loader").fadeOut(500);
                             $("#mainbody").append(crumbs + table);
@@ -284,38 +287,33 @@
         // Scan status
         function scanSummaryView(instanceId) {
             grid = "<div id='scansummary-content'>";
-            grid += "<div class='row'>";
-            grid += "<div class='col-sm-7'>";
+
+            // Plain-English status card
+            grid += "<div class='panel panel-default'><div class='panel-body'>";
+            grid += "<table class='table table-condensed' style='margin-bottom:0'>";
+            grid += "<tbody>";
+            grid += "<tr><td style='width:130px'><strong>Status</strong></td><td><span id='status'>Loading...</span></td></tr>";
+            grid += "<tr><td><strong>Target</strong></td><td><span id='scan-target'>Loading...</span></td></tr>";
+            grid += "<tr><td><strong>Started</strong></td><td><span id='scan-started'>Loading...</span></td></tr>";
+            grid += "<tr><td><strong>Finished</strong></td><td><span id='scan-ended'>—</span></td></tr>";
+            grid += "<tr><td><strong>Findings</strong></td><td><span id='tcounter'>?</span> total, <span id='ucounter'>?</span> unique, <span id='errors'>?</span> errors</td></tr>";
+            grid += "<tr><td><strong>Correlations</strong></td>";
+            grid += "<td>";
+            grid += "<span class='badge alert-danger' id='corr-high'>?</span>&nbsp;High&nbsp;&nbsp;";
+            grid += "<span class='badge alert-warning' id='corr-medium'>?</span>&nbsp;Medium&nbsp;&nbsp;";
+            grid += "<span class='badge alert-info' id='corr-low'>?</span>&nbsp;Low&nbsp;&nbsp;";
+            grid += "<span class='badge alert-success' id='corr-info'>?</span>&nbsp;Info";
+            grid += "</td></tr>";
+            grid += "</tbody></table>";
+            grid += "</div></div>";
+
+            // Findings by category — plain sorted table
             grid += "<div class='panel panel-default'>";
-            grid += "<div class='panel-heading'><i class='glyphicon glyphicon-eye-open'></i>&nbsp;&nbsp;Scan Status</div><div class='panel-body' style='padding: 5px'>";
-            grid += "<div class='btn-toolbar text-center'>";
-            grid += "<div class='btn-group' style='float: unset; padding: 5px'><button class='btn disabled btn-md btn-secondary' style='cursor: default;'>Total</span></button>";
-            grid += "<button class='btn disabled btn-md btn-default' id='tcounter' style='cursor: default;'>?</button></div>";
-            grid += "<div class='btn-group' style='float: unset; padding: 5px'><button class='btn disabled btn-md btn-secondary' style='cursor: default;'>Unique</button>";
-            grid += "<button class='btn disabled btn-md btn-default' id='ucounter' style='cursor: default;'>?</button></div>";
-            grid += "<div class='btn-group' style='float: unset; padding: 5px'><button class='btn disabled btn-md btn-secondary' style='cursor: default;'>Status</button>";
-            grid += "<button class='btn disabled btn-md btn-default' id='status' style='cursor: default;'>?</button></div>";
-            grid += "<div class='btn-group' style='float: unset; padding: 5px'><button class='btn disabled btn-md btn-secondary' style='cursor: default;'>Errors</button>";
-            grid += "<button class='btn disabled btn-md btn-default' id='errors' style='cursor: default;'>?</button></div>";
-            grid += "</div></div></div></div>";
-            grid += "<div class='col-sm-5'>";
-            grid += "<div class='panel panel-default'>";
-            grid += "<div class='panel-heading'><i class='glyphicon glyphicon-exclamation-sign'></i>&nbsp;&nbsp;Correlations</div><div class='panel-body' style='padding: 5px'>";
-            grid += "<div class='btn-toolbar text-center'>";
-            grid += "<div class='btn-group' style='float: unset; padding: 5px'><button class='btn disabled btn-md btn-danger' style='cursor: default;'>High</span></button>";
-            grid += "<button class='btn disabled btn-md btn-default' id='corr-high' style='cursor: default;'>?</button></div>";
-            grid += "<div class='btn-group' style='float: unset; padding: 5px'><button class='btn disabled btn-md btn-warning' style='cursor: default;'>Medium</button>";
-            grid += "<button class='btn disabled btn-md btn-default' id='corr-medium' style='cursor: default;'>?</button></div>";
-            grid += "<div class='btn-group' style='float: unset; padding: 5px'><button class='btn disabled btn-md btn-primary' style='cursor: default;'>Low</button>";
-            grid += "<button class='btn disabled btn-md btn-default' id='corr-low' style='cursor: default;'>?</button></div>";
-            grid += "<div class='btn-group' style='float: unset; padding: 5px'><button class='btn disabled btn-md btn-success' style='cursor: default;'>Info</button>";
-            grid += "<button class='btn disabled btn-md btn-default' id='corr-info' style='cursor: default;'>?</button></div>";
-            grid += "</div></div></div></div></div>";
-            grid += "<div class='row'><div class='col-sm-12'>";
-            grid += "<div class='panel panel-default'>";
-            grid += "<div class='panel-heading'><i class='glyphicon glyphicon-stats'></i>&nbsp;&nbsp;Data Types</div><div class='panel-body'>";
-            grid += "<div id='vbarsummary'></div>";
-            grid += "</div></div></div></div>";
+            grid += "<div class='panel-heading'><strong>Findings by Category</strong> <small>(click a category to browse its data)</small></div>";
+            grid += "<div class='panel-body' id='vbarsummary'><p class='text-muted'>Loading...</p></div>";
+            grid += "</div>";
+
+            grid += "</div>";
 
             $("#scansummary-content").remove();
             $("#scanlogs-content").remove();
@@ -340,6 +338,9 @@
                         scanStatus = data[5];
                         scanCorrelations = data[6];
 
+                        $("#scan-target").html(scanTarget || '—');
+                        $("#scan-started").html(scanStarted || '—');
+                        $("#scan-ended").html(scanEnded || '—');
                         $("#corr-high").html(scanCorrelations['HIGH']);
                         $("#corr-medium").html(scanCorrelations['MEDIUM']);
                         $("#corr-low").html(scanCorrelations['LOW']);
@@ -397,22 +398,26 @@
                         }
                         $('#scanstatusbadge').removeClass(["alert-info", "alert-warning", "alert-danger"]).addClass(statusy);
                         $('#status').html(scanStatus);
-                        // Plain-English summary banner
-                        if (totalCount > 0) {
-                            var catWord = scanSummary.length === 1 ? 'category' : 'categories';
-                            var bannerClass = scanStatus === 'FINISHED' ? 'alert-success' : 'alert-info';
-                            var runningNote = (scanStatus === 'RUNNING' || scanStatus === 'STARTED' || scanStatus === 'STARTING' || scanStatus === 'INITIALIZING') ? ' &mdash; scan still running, more may appear.' : '.';
-                            $('#sf-scan-banner')
-                                .removeClass('alert-info alert-success alert-warning alert-danger')
-                                .addClass(bannerClass)
-                                .html('<strong>' + totalCount.toLocaleString() + ' data points</strong> found across <strong>' + scanSummary.length + ' ' + catWord + '</strong>' + runningNote)
-                                .show();
-                        }
                         $("#vbarsummary").empty();
                         if (scanSummary.length == 0) {
-                          $("#vbarsummary").append("<div id='scansummary-content' class='alert alert-warning'><h4>No data.</h4>If the scan is still running this section will update shortly.</div>");
+                          $("#vbarsummary").append("<div class='alert alert-warning'><h4>No data.</h4>If the scan is still running this section will update shortly.</div>");
                         } else {
-                          sf_viz_vbar("#vbarsummary", scanSummary);
+                          var sorted = scanSummary.slice().sort(function(a, b) { return b.total - a.total; });
+                          var tbl = "<table class='table table-bordered table-striped table-condensed tablesorter'>";
+                          tbl += "<thead><tr><th>Category</th><th>Total</th><th>Unique</th></tr></thead><tbody>";
+                          for (var j = 0; j < sorted.length; j++) {
+                            var sid = sorted[j].scanId;
+                            var sname = sorted[j].name;
+                            var stid = sorted[j].id;
+                            tbl += "<tr>";
+                            tbl += "<td><a class='link' onClick='browseEventData(\"" + sid + "\",\"" + sname + "\",\"" + stid + "\",\"full\")'>" + sname + "</a></td>";
+                            tbl += "<td>" + sorted[j].total + "</td>";
+                            tbl += "<td>" + sorted[j].counter + "</td>";
+                            tbl += "</tr>";
+                          }
+                          tbl += "</tbody></table>";
+                          $("#vbarsummary").html(tbl);
+                          $("#vbarsummary table").tablesorter();
                         }
                         $("#loader").fadeOut(500);
                     });

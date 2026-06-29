@@ -983,6 +983,8 @@ class SpiderFootWebUi:
         if res is None:
             return self.error("Scan ID not found.")
 
+        cherrypy.response.headers['Cache-Control'] = "no-store, no-cache, must-revalidate"
+        cherrypy.response.headers['Pragma'] = "no-cache"
         templ = Template(filename='spiderfoot/templates/scaninfo.tmpl', lookup=self.lookup, input_encoding='utf-8')
         return templ.render(id=id, name=html.escape(res[0]), status=res[5], docroot=self.docroot, version=__version__,
                             pageid="SCANLIST")
