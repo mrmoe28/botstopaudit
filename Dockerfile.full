@@ -1,14 +1,6 @@
-# ── Go builder stage: Nuclei + TruffleHog ───────────────────
-FROM golang:1.25-alpine AS go-builder
-RUN apk add --no-cache git gcc musl-dev
-
-# Nuclei: standard go install works fine
-RUN go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
-
-# TruffleHog: has replace directives in go.mod, must build from source
-RUN git clone --depth 1 https://github.com/trufflesecurity/trufflehog.git /src/trufflehog \
-    && cd /src/trufflehog && go build -o /usr/local/bin/trufflehog . \
-    && rm -rf /src/trufflehog
+# ── Pull pre-built binaries from official images (no compilation) ──
+FROM trufflesecurity/trufflehog:latest AS trufflehog-src
+FROM projectdiscovery/nuclei:latest AS nuclei-src
 
 # ── Main image ───────────────────────────────────────────────
 FROM python:3.11-slim
@@ -23,8 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && chmod u+s /usr/bin/nmap \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=go-builder /go/bin/nuclei /usr/local/bin/nuclei
-COPY --from=go-builder /usr/local/bin/trufflehog /usr/local/bin/trufflehog
+COPY --from=nuclei-src /usr/local/bin/nuclei /usr/local/bin/nuclei
+COPY --from=trufflehog-src /usr/bin/trufflehog /usr/local/bin/trufflehog
 
 RUN git clone --depth 1 https://github.com/urbanadventurer/WhatWeb /tools/WhatWeb \
     && gem install rchardet mongo json \
