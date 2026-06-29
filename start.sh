@@ -13,8 +13,8 @@ try:
         'sfp_tool_retirejs:retirejs_path': '/usr/bin/retire',
         'sfp_tool_testsslsh:testsslsh_path': '/tools/testssl.sh/testssl.sh',
         'sfp_tool_snallygaster:snallygaster_path': '/usr/local/bin/snallygaster',
-        'sfp_tool_trufflehog:trufflehog_path': '/go/bin/trufflehog',
-        'sfp_tool_nuclei:nuclei_path': '/go/bin/nuclei',
+        'sfp_tool_trufflehog:trufflehog_path': '/usr/local/bin/trufflehog',
+        'sfp_tool_nuclei:nuclei_path': '/usr/local/bin/nuclei',
         'sfp_tool_nuclei:template_path': '/root/nuclei-templates',
         'sfp_tool_nbtscan:nbtscan_path': '/usr/bin/nbtscan',
     })
