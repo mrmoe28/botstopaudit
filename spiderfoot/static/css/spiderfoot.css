@@ -202,6 +202,87 @@ input:checked + .slider:before {
   padding: 6px 12px !important;
 }
 
+/* ── New scan wizard cards ───────────────────────────── */
+.sf-page-lead {
+  color: #777;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.sf-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 18px 0 8px;
+}
+
+.sf-card-col {
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-bottom: 10px;
+}
+
+.sf-mode-card {
+  cursor: pointer;
+  min-height: 120px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  border: 2px solid #e0e0e0 !important;
+  margin-bottom: 0;
+}
+
+.sf-mode-card:hover {
+  border-color: #059CD7 !important;
+  box-shadow: 0 3px 10px rgba(5,156,215,0.18);
+}
+
+.sf-mode-card.sf-card-selected,
+.sf-mode-card.panel-primary {
+  border-color: #059CD7 !important;
+  background-color: #f0faff;
+}
+
+.sf-card-icon {
+  font-size: 26px;
+  color: #059CD7;
+  margin-bottom: 6px;
+}
+
+.sf-card-title {
+  font-size: 14px;
+  margin: 4px 0 4px;
+}
+
+.sf-card-desc {
+  font-size: 12px;
+  line-height: 1.35;
+  margin-bottom: 0;
+}
+
+#sf-target-section {
+  padding: 4px 0 0;
+}
+
+.sf-advanced-link {
+  display: inline-block;
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 4px;
+  text-decoration: none;
+}
+
+.sf-advanced-link:hover {
+  color: #059CD7;
+  text-decoration: none;
+}
+
+/* ── Scan results summary banner ─────────────────────── */
+#sf-scan-banner {
+  margin: 6px 0 10px;
+  font-size: 13px;
+}
+
 /* ── Mobile / fluid layout ───────────────────────────── */
 body {
   overflow-x: hidden;

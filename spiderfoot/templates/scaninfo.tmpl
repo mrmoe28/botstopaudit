@@ -14,6 +14,7 @@
   end
 %>
 <h2>${name}&nbsp;<span id='scanstatusbadge' class='badge ${statusy}'>${status}</span>&nbsp;<img id="loader" src="${docroot}/static/img/loader.gif"></h2>
+<div id="sf-scan-banner" class="alert alert-info" style="display:none"></div>
   <div class="btn-toolbar" role="toolbar" style='padding-bottom: 10px'>
    <div class="btn-group">
       <a id='btn-status' class="btn btn-default" onClick='scanSummaryView("${id}")'><i class='glyphicon glyphicon-eye-open'></i>&nbsp;Summary</a>
@@ -396,6 +397,17 @@
                         }
                         $('#scanstatusbadge').removeClass(["alert-info", "alert-warning", "alert-danger"]).addClass(statusy);
                         $('#status').html(scanStatus);
+                        // Plain-English summary banner
+                        if (totalCount > 0) {
+                            var catWord = scanSummary.length === 1 ? 'category' : 'categories';
+                            var bannerClass = scanStatus === 'FINISHED' ? 'alert-success' : 'alert-info';
+                            var runningNote = (scanStatus === 'RUNNING' || scanStatus === 'STARTED' || scanStatus === 'STARTING' || scanStatus === 'INITIALIZING') ? ' &mdash; scan still running, more may appear.' : '.';
+                            $('#sf-scan-banner')
+                                .removeClass('alert-info alert-success alert-warning alert-danger')
+                                .addClass(bannerClass)
+                                .html('<strong>' + totalCount.toLocaleString() + ' data points</strong> found across <strong>' + scanSummary.length + ' ' + catWord + '</strong>' + runningNote)
+                                .show();
+                        }
                         $("#vbarsummary").empty();
                         if (scanSummary.length == 0) {
                           $("#vbarsummary").append("<div id='scansummary-content' class='alert alert-warning'><h4>No data.</h4>If the scan is still running this section will update shortly.</div>");
