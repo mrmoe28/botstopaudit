@@ -977,7 +977,7 @@ class SpiderFoot:
         sock.do_handshake()
         return sock
 
-    def parseCert(self, rawcert: str, fqdn: str = None, expiringdays: int = 30) -> dict:
+    def parseCert(self, rawcert: 'str | bytes', fqdn: str = None, expiringdays: int = 30) -> dict:
         """Parse a PEM-format SSL certificate.
 
         Args:
