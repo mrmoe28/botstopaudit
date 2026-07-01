@@ -1,5 +1,91 @@
 ## -*- coding: utf-8 -*-
 <%include file="HEADER.tmpl"/>
+
+<style>
+#type-info-panel {
+    position: fixed;
+    left: 0;
+    top: 50px;
+    width: 300px;
+    height: calc(100vh - 50px);
+    background: #fff;
+    border-right: 2px solid #ddd;
+    z-index: 950;
+    padding: 20px 16px 30px 16px;
+    overflow-y: auto;
+    box-shadow: 3px 0 14px rgba(0,0,0,0.13);
+    transform: translateX(-105%);
+    transition: transform 0.28s ease;
+}
+#type-info-panel.panel-open {
+    transform: translateX(0);
+}
+.info-panel-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+    line-height: 1;
+    padding: 0 4px;
+}
+.info-panel-close:hover { color: #333; }
+#info-panel-type-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin-bottom: 4px;
+}
+#info-panel-title {
+    margin-top: 0;
+    padding-right: 22px;
+    font-size: 17px;
+    font-weight: 600;
+    word-break: break-word;
+}
+#info-panel-counts {
+    margin-bottom: 10px;
+}
+#info-panel-counts .badge {
+    font-size: 12px;
+    margin-right: 5px;
+    padding: 4px 8px;
+}
+#info-panel-desc {
+    font-size: 13px;
+    line-height: 1.75;
+    color: #333;
+}
+#info-panel-footer {
+    margin-top: 16px;
+    font-size: 11px;
+    color: #aaa;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+}
+.type-info-icon {
+    color: #bbb;
+    cursor: pointer;
+    margin-left: 6px;
+    font-size: 13px;
+}
+.type-info-icon:hover { color: #337ab7; }
+</style>
+
+<div id="type-info-panel">
+    <button class="info-panel-close" onclick="closeInfoPanel()">&#215;</button>
+    <div id="info-panel-type-label">Data Category</div>
+    <h4 id="info-panel-title"></h4>
+    <div id="info-panel-counts"></div>
+    <hr style="margin:10px 0 12px 0;">
+    <p id="info-panel-desc"></p>
+    <div id="info-panel-footer">Click the category name in the table to browse all findings of this type.</div>
+</div>
+
 <%
   if status == "FINISHED":
     statusy = "alert-success"
@@ -78,6 +164,191 @@
         var currentType = "ALL";
         var currentTypeName = "All";
         var currentSection = "btn-browse";
+
+        var eventTypeHelp = {
+            'ACCOUNT_EXTERNAL_OWNED': 'An account belonging to the target was found on a third-party site (forum, social platform, service). These can reveal usernames, activity, and personal details.',
+            'ACCOUNT_EXTERNAL_OWNED_COMPROMISED': 'An account linked to the target appeared in a known data breach. Credentials may be compromised and could be used by attackers.',
+            'ACCOUNT_EXTERNAL_USER_SHARED_COMPROMISED': 'A user account connected to the target was found in a breach database, meaning login credentials are likely exposed.',
+            'AFFILIATE_EMAILADDR': 'An email address found on a site that is related to or connected with the target, but not the target itself.',
+            'AFFILIATE_INTERNET_NAME': 'A hostname or domain affiliated with the target — could be a partner site, related service, or shared infrastructure.',
+            'AFFILIATE_INTERNET_NAME_HIJACKABLE': 'An affiliated domain that appears unregistered or expired. Someone could register it and impersonate the target.',
+            'AFFILIATE_INTERNET_NAME_UNRESOLVED': 'An affiliated hostname that exists in records but cannot be resolved to an IP address — may be inactive or misconfigured.',
+            'AFFILIATE_IPADDR': 'An IP address linked to an affiliated site or service — not directly owned by the target, but connected to it.',
+            'AFFILIATE_IPV6_ADDRESS': 'An IPv6 address linked to an affiliated site or service connected to the target.',
+            'AFFILIATE_DOMAIN_NAME': 'A domain name that is related to or affiliated with the target organization.',
+            'AFFILIATE_DOMAIN_UNREGISTERED': 'An affiliated domain name that is currently unregistered — a potential brand or phishing risk.',
+            'AFFILIATE_COMPANY_NAME': 'A company name found in connection with the target — could be a partner, subsidiary, or related business.',
+            'AFFILIATE_DOMAIN_WHOIS': 'WHOIS registration data for a domain affiliated with the target.',
+            'APPSTORE_ENTRY': 'A mobile or desktop app listing in an app store (Google Play, Apple App Store, etc.) linked to the target.',
+            'CLOUD_STORAGE_BUCKET': 'A cloud storage location (Amazon S3, Google Cloud, Azure Blob, etc.) associated with the target. These can sometimes contain sensitive or public files.',
+            'CLOUD_STORAGE_BUCKET_OPEN': 'A cloud storage bucket that is publicly accessible without authentication. This is a security risk — anyone could read or download the files inside.',
+            'COMPANY_NAME': 'A company name discovered during the scan, typically from WHOIS records, websites, or SSL certificates.',
+            'CREDIT_CARD_NUMBER': 'A credit card number found in public data. This is a serious finding and likely indicates a data leak.',
+            'BASE64_DATA': 'Data encoded in Base64 format found during the scan. Base64 is often used to encode binary data or obscure content in plain text.',
+            'BITCOIN_ADDRESS': 'A Bitcoin wallet address associated with the target, found in public sources. Could be linked to donations, payments, or illicit activity.',
+            'BITCOIN_BALANCE': 'The balance of a Bitcoin address associated with the target.',
+            'BGP_AS_OWNER': 'An Autonomous System Number (ASN) that the target owns. An ASN is a large block of IP addresses managed by a single organization on the internet.',
+            'BGP_AS_MEMBER': 'An ASN that the target\'s IP addresses belong to, but which the target may not directly own.',
+            'BLACKLISTED_IPADDR': 'An IP address used by the target that appears on threat intelligence blacklists — associated with spam, malware, or other malicious activity.',
+            'BLACKLISTED_INTERNET_NAME': 'A hostname linked to the target that has been flagged on a security blacklist for malicious behavior.',
+            'BLACKLISTED_AFFILIATE_INTERNET_NAME': 'An affiliated hostname of the target that has been blacklisted for malicious activity.',
+            'BLACKLISTED_AFFILIATE_IPADDR': 'An IP address linked to an affiliate of the target that appears on threat blacklists.',
+            'BLACKLISTED_COHOST': 'Another site sharing the target\'s server that has been blacklisted. This could affect the target\'s reputation.',
+            'BLACKLISTED_SUBNET': 'A blacklisted IP address found on the same subnet as the target.',
+            'BLACKLISTED_NETBLOCK': 'A blacklisted IP found within a network block owned by the target.',
+            'COUNTRY_NAME': 'The country where the target\'s IP addresses, servers, or registrations are located.',
+            'CO_HOSTED_SITE': 'Another website sharing the same server or IP address as the target. If the co-hosted site is compromised, it could affect the target.',
+            'CO_HOSTED_SITE_DOMAIN': 'The domain name of a site that shares the same server as the target.',
+            'DARKNET_MENTION_URL': 'The target was mentioned on a darknet (dark web) site. This could indicate stolen data for sale, hacking activity, or illicit discussion.',
+            'DARKNET_MENTION_CONTENT': 'The actual content from a darknet page that mentions the target.',
+            'DATE_HUMAN_DOB': 'A date of birth found in public sources linked to a person associated with the target.',
+            'DEFACED_INTERNET_NAME': 'A website associated with the target that has been defaced — hackers replaced the content with their own message.',
+            'DEFACED_IPADDR': 'An IP address linked to the target where a hosted site has been defaced by attackers.',
+            'DESCRIPTION_CATEGORY': 'A category label describing the target, pulled from business directories or databases.',
+            'DESCRIPTION_ABSTRACT': 'A brief description of the target from a directory or database.',
+            'DEVICE_TYPE': 'The type of hardware device identified (router, webcam, printer, server, etc.). Internet-exposed devices can be vulnerable.',
+            'DNS_TEXT': 'A DNS TXT record for the target\'s domain. These often contain email authentication settings (SPF, DKIM, DMARC), verification codes, or other configuration data.',
+            'DNS_SRV': 'A DNS SRV record pointing to a specific service (VoIP, XMPP, etc.) running on the target\'s infrastructure.',
+            'DNS_SPF': 'An SPF (Sender Policy Framework) DNS record that controls which mail servers can send email on behalf of the target\'s domain.',
+            'DOMAIN_NAME': 'A domain name (like example.com) belonging to or associated with the target. Domains are the core of a target\'s online identity.',
+            'DOMAIN_NAME_PARENT': 'The root domain that a discovered subdomain belongs to. For example, if "mail.example.com" is found, "example.com" is the parent domain.',
+            'DOMAIN_REGISTRAR': 'The company where the target\'s domain name is registered (e.g., GoDaddy, Namecheap, Cloudflare).',
+            'DOMAIN_WHOIS': 'Registration records for the target\'s domain, including owner contact info, registration dates, and name servers.',
+            'EMAILADDR': 'An email address associated with the target — found in public directories, website source code, WHOIS records, or breach data.',
+            'EMAILADDR_COMPROMISED': 'An email address linked to the target that appeared in a known data breach. Passwords for this account may be exposed.',
+            'EMAILADDR_DELIVERABLE': 'An email address verified to be active and able to receive mail.',
+            'EMAILADDR_DISPOSABLE': 'A temporary or throwaway email address linked to the target, often used to avoid spam or hide identity.',
+            'EMAILADDR_GENERIC': 'A role-based email address (info@, support@, admin@, etc.) for the target\'s domain. These are typically public-facing contacts.',
+            'EMAILADDR_UNDELIVERABLE': 'An email address associated with the target that bounces — no longer active or never valid.',
+            'ERROR_MESSAGE': 'An error message exposed by the target\'s web application. Error messages can leak internal file paths, software versions, or database details.',
+            'ETHEREUM_ADDRESS': 'An Ethereum cryptocurrency wallet address associated with the target.',
+            'ETHEREUM_BALANCE': 'The balance of an Ethereum address associated with the target.',
+            'GEOINFO': 'Geographic information (city, region, country) about where the target\'s systems or people are located, based on IP or WHOIS data.',
+            'HASH': 'A cryptographic hash value (MD5, SHA, etc.) found in the scan — often from file fingerprinting or password breach data.',
+            'HASH_COMPROMISED': 'A password hash linked to the target found in a breach database. If cracked, this gives attackers the actual password.',
+            'HTTP_CODE': 'The HTTP response code from a web request to the target (200 = OK, 403 = Forbidden, 404 = Not Found). Helps map what is publicly accessible.',
+            'HUMAN_NAME': 'A real person\'s name found in connection with the target, from WHOIS records, LinkedIn, or other public sources.',
+            'IBAN_NUMBER': 'An International Bank Account Number found in public data linked to the target. Could indicate financial account exposure.',
+            'INTERESTING_FILE': 'A file found on the target\'s website that could be sensitive — such as config files, backups, admin pages, or files that shouldn\'t be public.',
+            'INTERESTING_FILE_HISTORIC': 'An interesting file found in web archives (Wayback Machine) — it may no longer be live but could still contain sensitive data.',
+            'JUNK_FILE': 'A file found on the target that is low-value (temp files, logs, etc.) but was flagged during the scan.',
+            'INTERNAL_IP_ADDRESS': 'An internal network IP address (like 192.168.x.x or 10.x.x.x) that was accidentally exposed in public-facing data, revealing internal network details.',
+            'INTERNET_NAME': 'A specific hostname or subdomain discovered during the scan (e.g., mail.example.com or vpn.example.com). Each one is a potential entry point to investigate.',
+            'INTERNET_NAME_UNRESOLVED': 'A hostname associated with the target that has no current DNS record pointing to an IP — exists on paper but isn\'t active.',
+            'IP_ADDRESS': 'A public IP address belonging to the target. IP addresses identify servers and devices on the internet and are the foundation for further investigation.',
+            'IPV6_ADDRESS': 'An IPv6 format IP address belonging to the target. IPv6 is the newer internet addressing system, increasingly common alongside IPv4.',
+            'LEI': 'A Legal Entity Identifier — a 20-character code that uniquely identifies businesses in financial transactions and regulatory filings.',
+            'JOB_TITLE': 'A job title found in public records linked to a person associated with the target. Useful for mapping organizational structure.',
+            'LINKED_URL_INTERNAL': 'A URL found on the target\'s website that points to another page within the same site. Helps map the full structure of the target\'s web presence.',
+            'LINKED_URL_EXTERNAL': 'A URL found on the target\'s website that links to a third-party site. Reveals partnerships, analytics services, or external dependencies.',
+            'MALICIOUS_ASN': 'The Autonomous System (network block) that the target\'s IP addresses belong to has been flagged as malicious.',
+            'MALICIOUS_BITCOIN_ADDRESS': 'A Bitcoin address linked to the target that has been reported for fraud, ransomware, or other criminal activity.',
+            'MALICIOUS_IPADDR': 'An IP address associated with the target that is flagged by threat intelligence as malicious — linked to malware, botnets, spam, or hacking campaigns.',
+            'MALICIOUS_COHOST': 'Another site sharing the target\'s server has been reported as malicious, which can affect the target\'s reputation and security.',
+            'MALICIOUS_EMAILADDR': 'An email address associated with the target that has been used in phishing, spam, or fraud campaigns.',
+            'MALICIOUS_INTERNET_NAME': 'A hostname linked to the target that has been flagged as malicious by threat intelligence services.',
+            'MALICIOUS_AFFILIATE_INTERNET_NAME': 'An affiliated hostname of the target that is flagged as malicious.',
+            'MALICIOUS_AFFILIATE_IPADDR': 'An IP address of an affiliate of the target that is flagged as malicious.',
+            'MALICIOUS_NETBLOCK': 'A malicious IP address found within a network block that the target owns.',
+            'MALICIOUS_PHONE_NUMBER': 'A phone number linked to the target that appears on fraud or scam reporting databases.',
+            'MALICIOUS_SUBNET': 'A malicious IP found on the same subnet as the target\'s infrastructure.',
+            'NETBLOCK_OWNER': 'A block of IP addresses (CIDR range like 192.0.2.0/24) registered to the target organization with an internet registry (ARIN, RIPE, etc.).',
+            'NETBLOCKV6_OWNER': 'An IPv6 network block registered to the target organization.',
+            'NETBLOCK_MEMBER': 'An IP range that the target\'s addresses belong to, but which the target may not own directly.',
+            'NETBLOCK_WHOIS': 'WHOIS registration data for a network block associated with the target.',
+            'OPERATING_SYSTEM': 'The operating system detected on one of the target\'s servers or devices (e.g., Linux, Windows Server). Useful for identifying software versions and potential vulnerabilities.',
+            'LEAKSITE_URL': 'A URL on a data leak or ransomware group\'s website mentioning the target. This typically means stolen data has been published or is threatened to be.',
+            'LEAKSITE_CONTENT': 'The actual content from a data leak site that references the target.',
+            'PASSWORD_COMPROMISED': 'An actual plaintext password linked to the target was found in a breach database. This is a critical finding — accounts should be secured immediately.',
+            'PHONE_NUMBER': 'A phone number associated with the target, found in WHOIS records, websites, or public directories.',
+            'PHONE_NUMBER_COMPROMISED': 'A phone number linked to the target that appeared in a breach or was used in fraudulent activity.',
+            'PHONE_NUMBER_TYPE': 'The type of a discovered phone number (mobile, landline, VOIP, etc.).',
+            'PHYSICAL_ADDRESS': 'A street address or mailing address linked to the target, typically from WHOIS registration or business listings.',
+            'PHYSICAL_COORDINATES': 'Latitude/longitude coordinates associated with the target, derived from IP geolocation or metadata.',
+            'PGP_KEY': 'A PGP public encryption key belonging to a person or entity linked to the target. Found on keyservers or websites.',
+            'PROXY_HOST': 'A proxy server identified in connection with the target\'s IP addresses. Proxies are used to anonymize traffic or bypass restrictions.',
+            'PROVIDER_DNS': 'The DNS provider (nameserver) managing the target\'s domain records. Knowing this reveals where DNS administration happens.',
+            'PROVIDER_JAVASCRIPT': 'JavaScript code loaded from a third-party provider on the target\'s website. Third-party scripts can be a supply chain security risk.',
+            'PROVIDER_MAIL': 'The mail server (MX record) handling email for the target\'s domain. Reveals what email infrastructure the target uses.',
+            'PROVIDER_HOSTING': 'The company hosting the target\'s servers or websites (AWS, Azure, Google Cloud, Cloudflare, etc.). Helps understand the infrastructure.',
+            'PROVIDER_TELCO': 'The telecommunications provider associated with the target\'s phone numbers or network infrastructure.',
+            'PUBLIC_CODE_REPO': 'A public code repository (GitHub, GitLab, Bitbucket, etc.) linked to the target. Can contain source code, API keys, credentials, or internal documentation.',
+            'RAW_RIR_DATA': 'Raw data retrieved from Regional Internet Registries (ARIN, RIPE, APNIC, etc.) about the target\'s IP address or network block ownership.',
+            'RAW_DNS_RECORDS': 'The complete raw DNS data for the target\'s domain, including all record types (A, AAAA, MX, TXT, CNAME, etc.).',
+            'RAW_FILE_META_DATA': 'Metadata embedded in files (PDFs, images, Office documents) found on the target\'s site. Can reveal author names, software versions, and internal file paths.',
+            'SEARCH_ENGINE_WEB_CONTENT': 'Web page content found via search engines that mentions the target. Helps discover publicly indexed information about the target.',
+            'SOCIAL_MEDIA': 'A social media account (Twitter/X, LinkedIn, Facebook, Instagram, etc.) linked to the target or its employees. Useful for gathering information about personnel and activities.',
+            'SIMILAR_ACCOUNT_EXTERNAL': 'An external account with a similar username or name to the target — may or may not belong to the target.',
+            'SIMILARDOMAIN': 'A domain name similar to the target\'s domain — could be a typosquat (used for phishing attacks) or a legitimate variant the target should own.',
+            'SIMILARDOMAIN_WHOIS': 'WHOIS data for a domain that is similar to the target\'s domain.',
+            'SOFTWARE_USED': 'Software detected on the target\'s servers or systems (CMS, frameworks, libraries, versions). Known vulnerabilities in detected software could be exploited.',
+            'SSL_CERTIFICATE_RAW': 'The raw SSL/TLS certificate data for the target\'s domain.',
+            'SSL_CERTIFICATE_ISSUED': 'An SSL/TLS certificate issued for the target\'s domain. Contains information about domain ownership and what domains are covered by the certificate.',
+            'SSL_CERTIFICATE_ISSUER': 'The Certificate Authority (CA) that issued the target\'s SSL certificate (e.g., Let\'s Encrypt, DigiCert, Sectigo).',
+            'SSL_CERTIFICATE_MISMATCH': 'The SSL certificate doesn\'t match the hostname it\'s serving. This causes browser security warnings and may indicate misconfiguration.',
+            'SSL_CERTIFICATE_EXPIRED': 'An SSL certificate for the target has expired. This breaks secure connections and shows as a security warning in browsers.',
+            'SSL_CERTIFICATE_EXPIRING': 'An SSL certificate that will expire soon. If not renewed, it will cause connection errors for visitors.',
+            'TARGET_WEB_CONTENT': 'Raw HTML or page content retrieved from the target\'s website during the scan.',
+            'TARGET_WEB_CONTENT_TYPE': 'The MIME type of content found on the target\'s website (text/html, application/pdf, image/jpeg, etc.).',
+            'TARGET_WEB_COOKIE': 'HTTP cookies set by the target\'s website. Cookie names and values can reveal session management systems, analytics tools, and security settings.',
+            'TCP_PORT_OPEN': 'A port open on the target\'s server accepting TCP connections. Common ones: 80 (HTTP), 443 (HTTPS), 22 (SSH), 21 (FTP), 3306 (MySQL). Open ports are potential entry points.',
+            'TCP_PORT_OPEN_BANNER': 'The text banner returned when connecting to an open port — often reveals the software name and version running on that port.',
+            'TOR_EXIT_NODE': 'The target\'s IP address is used as a TOR exit node. TOR is an anonymizing network; exit nodes route anonymous TOR traffic to the open internet.',
+            'UDP_PORT_OPEN': 'A port open on the target\'s server accepting UDP connections. Common ones: 53 (DNS), 123 (NTP), 161 (SNMP).',
+            'UDP_PORT_OPEN_INFO': 'Additional information about an open UDP port found on the target.',
+            'URL_ADBLOCKED_EXTERNAL': 'A URL on the target that is blocked by ad blockers — typically indicates advertising or tracking scripts.',
+            'URL_ADBLOCKED_INTERNAL': 'An internal URL on the target that ad blockers flag — may indicate embedded advertising or tracking.',
+            'URL_FORM': 'A URL where the target\'s website has an HTML form (login pages, contact forms, search boxes, etc.). Forms are common entry points for attacks.',
+            'URL_FLASH': 'A URL on the target\'s site that uses Adobe Flash — Flash is obsolete, unsupported, and a security risk.',
+            'URL_JAVASCRIPT': 'A URL on the target\'s site that uses JavaScript. JavaScript can be a vector for cross-site scripting (XSS) attacks if not handled carefully.',
+            'URL_WEB_FRAMEWORK': 'A URL that reveals a web framework (Django, React, Laravel, Rails, etc.) is in use. Helps identify the technology stack.',
+            'URL_JAVA_APPLET': 'A URL using Java Applets — an outdated technology that is a significant security risk and no longer supported in modern browsers.',
+            'URL_STATIC': 'A purely static page on the target\'s site — no forms or dynamic features. Contains fixed content like images, documents, or plain HTML.',
+            'URL_PASSWORD': 'A page on the target\'s website that accepts password input — login pages or authentication endpoints.',
+            'URL_UPLOAD': 'A page that accepts file uploads. File upload functionality is a common security risk if files aren\'t properly validated.',
+            'URL_FORM_HISTORIC': 'A form-containing URL found in web archives that may no longer be live.',
+            'URL_FLASH_HISTORIC': 'A historic URL that used Flash, found in web archives.',
+            'URL_JAVASCRIPT_HISTORIC': 'A historic URL using JavaScript, found in web archives.',
+            'URL_WEB_FRAMEWORK_HISTORIC': 'A historic URL revealing a web framework, found in web archives.',
+            'URL_STATIC_HISTORIC': 'A historic static URL found in web archives.',
+            'URL_PASSWORD_HISTORIC': 'A historic password-accepting URL found in web archives.',
+            'URL_UPLOAD_HISTORIC': 'A historic file-upload URL found in web archives.',
+            'USERNAME': 'A username linked to the target, found on websites, in source code, or in breach databases. Usernames can be used in credential stuffing attacks.',
+            'VPN_HOST': 'A host identified as a VPN endpoint associated with the target or within its network range.',
+            'VULNERABILITY_DISCLOSURE': 'A security vulnerability in the target\'s systems disclosed by a third party (security researcher, bug bounty, etc.).',
+            'VULNERABILITY_CVE_CRITICAL': 'A critical severity CVE (publicly known vulnerability) in software used by the target. Critical CVEs can lead to full system compromise — patch immediately.',
+            'VULNERABILITY_CVE_HIGH': 'A high severity CVE in software used by the target. Actively exploited by attackers — patch as soon as possible.',
+            'VULNERABILITY_CVE_MEDIUM': 'A medium severity CVE in software used by the target. Requires some conditions to exploit but should be addressed promptly.',
+            'VULNERABILITY_CVE_LOW': 'A low severity CVE in software used by the target. Lower risk but should be patched during normal update cycles.',
+            'VULNERABILITY_GENERAL': 'A security weakness found that isn\'t tied to a specific CVE — such as an exposed admin panel, default credentials, or weak configuration.',
+            'WEB_ANALYTICS_ID': 'An analytics tracking ID (Google Analytics, Adobe Analytics, etc.) on the target\'s site. These IDs can be used to find other websites run by the same owner.',
+            'WEBSERVER_BANNER': 'Version information the target\'s web server reveals in responses (e.g., "Apache 2.4.51"). Version info helps attackers find matching known vulnerabilities.',
+            'WEBSERVER_HTTPHEADERS': 'HTTP response headers from the target\'s web server. Headers reveal server software, security policies (CSP, HSTS, CORS), and caching behavior.',
+            'WEBSERVER_STRANGEHEADER': 'An unusual or custom HTTP header on the target\'s web server. May reveal internal systems, software, or misconfigurations.',
+            'WEBSERVER_TECHNOLOGY': 'A technology stack item detected on the target\'s website — CMS, programming language, or framework (WordPress, PHP, React, etc.).',
+            'WIFI_ACCESS_POINT': 'A WiFi access point found geographically near the target via public WiFi mapping databases. Can help confirm physical location.',
+            'WIKIPEDIA_PAGE_EDIT': 'The target\'s IP address was used to edit a Wikipedia article. This can reveal company or individual online activity.',
+            'AFFILIATE_DESCRIPTION_CATEGORY': 'A category label for an affiliated organization connected to the target.',
+            'AFFILIATE_DESCRIPTION_ABSTRACT': 'A brief description of an organization affiliated with the target.',
+            'AFFILIATE_DOMAIN_WHOIS': 'WHOIS registration data for a domain affiliated with the target.'
+        };
+
+        function showTypeInfo(typeId, typeName, total, unique) {
+            var desc = eventTypeHelp[typeId] || ('This data type was collected during the scan. Click the category name to browse all findings of this type.');
+            document.getElementById('info-panel-title').textContent = typeName;
+            var countsHtml = '';
+            if (total !== undefined && total !== null) {
+                countsHtml = '<span class="badge alert-info">' + total + ' total</span> ' +
+                             '<span class="badge alert-success">' + unique + ' unique</span>';
+            }
+            document.getElementById('info-panel-counts').innerHTML = countsHtml;
+            document.getElementById('info-panel-desc').textContent = desc;
+            document.getElementById('type-info-panel').classList.add('panel-open');
+        }
+
+        function closeInfoPanel() {
+            document.getElementById('type-info-panel').classList.remove('panel-open');
+        }
         var lastSearchType = "ALL";
         var lastSearchQuery = "";
         var dataloaders = [];
@@ -409,10 +680,15 @@
                             var sid = sorted[j].scanId;
                             var sname = sorted[j].name;
                             var stid = sorted[j].id;
+                            var stotal = sorted[j].total;
+                            var sunique = sorted[j].counter;
                             tbl += "<tr>";
-                            tbl += "<td><a class='link' onClick='browseEventData(\"" + sid + "\",\"" + sname + "\",\"" + stid + "\",\"full\")'>" + sname + "</a></td>";
-                            tbl += "<td>" + sorted[j].total + "</td>";
-                            tbl += "<td>" + sorted[j].counter + "</td>";
+                            tbl += "<td>";
+                            tbl += "<a class='link' onClick='browseEventData(\"" + sid + "\",\"" + sname + "\",\"" + stid + "\",\"full\")'>" + sname + "</a>";
+                            tbl += " <i class='glyphicon glyphicon-info-sign type-info-icon' title='What is this?' onclick='showTypeInfo(\"" + stid + "\",\"" + sname.replace(/"/g,'&quot;') + "\"," + stotal + "," + sunique + "); event.stopPropagation();'></i>";
+                            tbl += "</td>";
+                            tbl += "<td>" + stotal + "</td>";
+                            tbl += "<td>" + sunique + "</td>";
                             tbl += "</tr>";
                           }
                           tbl += "</tbody></table>";
@@ -575,11 +851,13 @@
                             var table = "<table id='scansummary-content' class='table table-bordered table-striped tablesorter'>";
                             table += "<thead><tr> <th>Type</th><th>Unique Data Elements</th> <th>Total Data Elements</th><th>Last Data Element</th></tr></thead><tbody>";
                             for (var i = 0; i < data.length; i++) {
-                                table += "<tr><td><a class='link' onClick='";
-                                table += "browseEventData(\"${id}\", \"" + escape(data[i][1]) + "\", \"" + data[i][0] + "\", \"full\");'>";
-                                table += data[i][1] + "</a></td>";
-                                table += "<td>" + data[i][4] + "</td>";
-                                table += "<td>" + data[i][3] + "</td>";
+                                var tid = data[i][0], tname = data[i][1], ttotal = data[i][3], tunique = data[i][4];
+                                table += "<tr><td>";
+                                table += "<a class='link' onClick='browseEventData(\"${id}\", \"" + escape(tname) + "\", \"" + tid + "\", \"full\")'>" + tname + "</a>";
+                                table += " <i class='glyphicon glyphicon-info-sign type-info-icon' title='What is this?' onclick='showTypeInfo(\"" + tid + "\",\"" + tname.replace(/"/g,'&quot;') + "\"," + ttotal + "," + tunique + "); event.stopPropagation();'></i>";
+                                table += "</td>";
+                                table += "<td>" + tunique + "</td>";
+                                table += "<td>" + ttotal + "</td>";
                                 table += "<td>" + data[i][2] + "</td>";
                             }
                             table += "</tbody></table>"
