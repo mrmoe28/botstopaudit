@@ -6,7 +6,7 @@
     position: fixed;
     left: 0;
     top: 50px;
-    width: 300px;
+    width: 360px;
     height: calc(100vh - 50px);
     background: #fff;
     border-right: 2px solid #ddd;
@@ -74,6 +74,43 @@
     font-size: 13px;
 }
 .type-info-icon:hover { color: #337ab7; }
+.info-panel-section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin: 14px 0 5px 0;
+    font-weight: 600;
+}
+#info-panel-threats {
+    margin: 0 0 4px 0;
+    padding-left: 18px;
+    font-size: 12px;
+    line-height: 1.75;
+    color: #555;
+}
+#info-panel-threats li { margin-bottom: 3px; }
+#info-panel-fix-wrap {
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 10px 8px 10px;
+}
+#info-panel-fix-prompt {
+    font-size: 11px;
+    line-height: 1.6;
+    color: #333;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0 0 8px 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+}
+#info-panel-copy-btn { width: 100%; font-size: 11px; }
 </style>
 
 <div id="type-info-panel">
@@ -82,7 +119,21 @@
     <h4 id="info-panel-title"></h4>
     <div id="info-panel-counts"></div>
     <hr style="margin:10px 0 12px 0;">
+    <div class="info-panel-section-label">What Is This?</div>
     <p id="info-panel-desc"></p>
+    <div id="info-panel-threats-section" style="display:none">
+        <div class="info-panel-section-label">Real-World Attack Scenarios</div>
+        <ul id="info-panel-threats"></ul>
+    </div>
+    <div id="info-panel-fix-section" style="display:none">
+        <div class="info-panel-section-label">Claude Code Fix Prompt</div>
+        <div id="info-panel-fix-wrap">
+            <pre id="info-panel-fix-prompt"></pre>
+            <button class="btn btn-default btn-xs" id="info-panel-copy-btn" onclick="copyFixPrompt()">
+                <i class="glyphicon glyphicon-copy"></i> Copy prompt
+            </button>
+        </div>
+    </div>
     <div id="info-panel-footer">Click the category name in the table to browse all findings of this type.</div>
 </div>
 
@@ -333,9 +384,247 @@
             'AFFILIATE_DOMAIN_WHOIS': 'WHOIS registration data for a domain affiliated with the target.'
         };
 
+        var eventTypeThreats = {
+            'VULNERABILITY_CVE_CRITICAL': [
+                'Automated bots scan for known CVEs 24/7 — your window to patch before being hit is hours, not days.',
+                'Critical CVEs often enable remote code execution with no login required — one HTTP request can hand attackers full server control.',
+                'Ransomware groups specifically target unpatched critical CVEs to gain initial access before encrypting systems and demanding payment.',
+                'Once exploited, attackers install backdoors that persist even after patching — assume compromise and audit for persistence.'
+            ],
+            'VULNERABILITY_CVE_HIGH': [
+                'High CVEs are actively exploited within days of public disclosure by both automated scanners and targeted attackers.',
+                'Many high CVEs enable privilege escalation — attackers with limited access elevate to full admin.',
+                'Exploit code for high CVEs is routinely published on GitHub and hacking forums within 24-48 hours of disclosure.',
+                'Attackers chain high CVEs with other findings (open ports, leaked credentials) to achieve full system compromise.'
+            ],
+            'VULNERABILITY_CVE_MEDIUM': [
+                'Medium CVEs often require some level of existing access, but these conditions are frequently already present.',
+                'Attackers use medium CVEs as stepping stones — combining several medium issues can equal a critical breach.',
+                'Unpatched medium CVEs accumulate over time, expanding your attack surface with each new deployment.'
+            ],
+            'VULNERABILITY_CVE_LOW': [
+                'Low CVEs on their own are minor, but are often chained with other weaknesses to escalate an attack.',
+                'They can expose internal version information that helps attackers plan more targeted follow-on attacks.',
+                'Leaving low CVEs unpatched signals poor security hygiene, attracting more probing by automated scanners.'
+            ],
+            'VULNERABILITY_GENERAL': [
+                'Exposed admin panels with default credentials are compromised in minutes by automated scanners.',
+                'Misconfigured services (open Redis, MongoDB with no auth) are found and exploited within hours of internet exposure.',
+                'General weaknesses are often the starting point attackers use to move deeper into your infrastructure.',
+                'These findings are frequently exploited in supply chain attacks — a weak point in your infrastructure can affect your customers too.'
+            ],
+            'SSL_CERTIFICATE_EXPIRED': [
+                'Browsers show full-page security warnings, driving users away and destroying trust instantly.',
+                'Encrypted connections may fall back to unencrypted — traffic becomes readable to anyone on the network.',
+                'Attackers use expired cert windows to perform man-in-the-middle attacks, intercepting login credentials and session tokens.',
+                'APIs and webhooks that verify SSL will silently fail, breaking integrations and payment flows.'
+            ],
+            'SSL_CERTIFICATE_MISMATCH': [
+                'Browsers block users with hard security errors — your site is effectively inaccessible.',
+                'Mismatches enable MITM attacks where an attacker intercepts and reads encrypted traffic.',
+                'Search engines penalize sites with SSL errors, tanking your ranking and organic traffic.',
+                'Indicates misconfiguration that may affect load balancers, CDN, or other subdomains too.'
+            ],
+            'SSL_CERTIFICATE_EXPIRING': [
+                'If not renewed in time, your site goes down with no warning and users see hard security blocks.',
+                'Expired certs during a busy period (launch, campaign) can kill revenue and trust at the worst moment.',
+                'Auto-renewal failures are common — Let\'s Encrypt bots can silently fail if DNS or server config changes.'
+            ],
+            'TCP_PORT_OPEN': [
+                'Exposed databases (MySQL:3306, PostgreSQL:5432, MongoDB:27017, Redis:6379) with no auth are breached in minutes by automated scanners.',
+                'SSH (port 22) faces thousands of brute-force login attempts per day from botnets — weak passwords get cracked fast.',
+                'Exposed admin panels (8080, 8443, 9200) are prime targets for unauthorized access.',
+                'Attackers map all open ports to build a complete picture of your infrastructure before choosing their attack vector.'
+            ],
+            'UDP_PORT_OPEN': [
+                'Exposed DNS (port 53) can be abused for DNS amplification DDoS attacks, using your server against others.',
+                'Open SNMP (port 161) with default community strings exposes device configuration and network topology.',
+                'NTP (port 123) can be used in amplification attacks and leaks system time and software info.',
+                'UDP services are often forgotten in firewall rules because they\'re less visible — attackers know this.'
+            ],
+            'CLOUD_STORAGE_BUCKET_OPEN': [
+                'Open S3 or GCS buckets are found by bots in minutes — your files may already be downloaded.',
+                'Leaked backups, config files, and .env files in open buckets have caused some of the largest breaches in history.',
+                'Attackers search open buckets for database dumps, API keys, and source code to pivot into your backend.',
+                'Regulatory fines (GDPR, HIPAA) for publicly exposed PII via open buckets can be severe regardless of intent.'
+            ],
+            'PUBLIC_CODE_REPO': [
+                'Developers frequently commit .env files, API keys, and private keys to public repos by mistake.',
+                'Automated tools scan GitHub/GitLab for secrets within seconds of a push — once committed, assume it\'s compromised.',
+                'Source code exposure lets attackers understand your exact architecture and craft targeted exploits.',
+                'Old commit history often contains secrets even after they\'ve been "deleted" from the latest version.'
+            ],
+            'INTERESTING_FILE': [
+                'Backup files (.bak, .old, .zip) left on a web server expose full source code including database credentials.',
+                '.env files accidentally deployed to a public web root are one of the most common ways credentials are leaked.',
+                'Admin pages accessible without authentication are found by directory scanners immediately.',
+                'Config files (wp-config.php, database.yml, settings.py) expose database connection strings and secret keys.'
+            ],
+            'ERROR_MESSAGE': [
+                'Stack traces expose internal file paths, framework versions, and database schemas — free intel for attackers.',
+                'SQL error messages confirm injection vulnerabilities and reveal table/column names to attackers.',
+                'Exposed exception details reveal your tech stack, making it easy to look up their known CVEs.',
+                'Debug info enabled in production is a sign that other security controls may be loose too.'
+            ],
+            'INTERNAL_IP_ADDRESS': [
+                'Internal IP ranges reveal your private network topology, helping attackers plan lateral movement after initial access.',
+                'Knowing internal IPs lets attackers pivot from a compromised public server to internal systems.',
+                'Exposed internal addresses can reveal server segmentation, load balancer configs, and internal service names.',
+                'Often combined with SSRF vulnerabilities to access internal services from outside the network.'
+            ],
+            'EMAILADDR_COMPROMISED': [
+                'Compromised email/password pairs are sold on dark web markets for $1-$10 — very accessible to attackers.',
+                'Credential stuffing tools test leaked passwords against your login page, admin panel, and cloud accounts automatically.',
+                'If the same password is reused, one breach unlocks multiple accounts — email, Slack, GitHub, AWS.',
+                'Attackers use compromised executive emails for business email compromise (BEC) fraud — redirecting wire transfers.'
+            ],
+            'PASSWORD_COMPROMISED': [
+                'An actual plaintext password in breach data means that account is already compromised — change it now.',
+                'Attackers use these passwords against every service the person might use: email, cloud providers, banking, VPN.',
+                'Even old passwords are useful — people reuse passwords or use predictable variations (Password1 → Password2).',
+                'Breach data is aggregated — having one password exposed increases the chance of targeted spear phishing.'
+            ],
+            'HASH_COMPROMISED': [
+                'Common passwords as MD5/SHA1 hashes are cracked in seconds using precomputed rainbow tables.',
+                'Even bcrypt hashes can be cracked with GPU power if the original password was weak.',
+                'Cracked password hashes are used for credential stuffing against your login page and admin panel.',
+                'The presence of hashed passwords in breach data puts your users\' other accounts at risk too.'
+            ],
+            'DARKNET_MENTION_URL': [
+                'A dark web mention often means stolen data (customer records, credentials) is being advertised or sold.',
+                'Ransomware groups post victim data on "leak sites" to pressure payment — this could mean an active incident.',
+                'Dark web forums discuss specific attack techniques targeting named companies — your infrastructure may be a current target.',
+                'Compromised access credentials (VPN, admin panels) are frequently sold before attackers use them.'
+            ],
+            'LEAKSITE_URL': [
+                'Your data is already published or about to be — ransomware groups use leak sites to pressure victims.',
+                'Once on a leak site, data is downloaded and reshared widely — you cannot put it back.',
+                'Leak site mentions are used by competitors, journalists, and regulators — this is a reputational and legal emergency.',
+                'Other attackers use leak site data to craft follow-on attacks against your customers and employees.'
+            ],
+            'MALICIOUS_IPADDR': [
+                'Your IP on a threat intel blacklist means email from your server goes to spam — breaking transactional emails.',
+                'Security-conscious companies block traffic from blacklisted IPs — your API calls and webhooks may silently fail.',
+                'Blacklisting often means your server is actively participating in malicious activity — possible active compromise.',
+                'Getting delisted takes time and repeated requests — deliverability damage continues while blacklisted.'
+            ],
+            'BLACKLISTED_IPADDR': [
+                'Email from a blacklisted IP is rejected or junked — customer notifications and password resets stop working.',
+                'Security tools at your customers\' companies automatically block connections from blacklisted IPs.',
+                'Indicates your server may be compromised and used as part of a botnet or spam campaign.',
+                'Multiple blacklistings can result in your hosting provider suspending your account entirely.'
+            ],
+            'DEFACED_INTERNET_NAME': [
+                'A defaced site means attackers had write access — they could also have installed backdoors or stolen data.',
+                'Defacements are often used as a distraction while attackers exfiltrate data quietly in the background.',
+                'Even after removing defaced content, backdoors and web shells may remain, giving persistent access.',
+                'Defacement is public — customers, partners, and press will see it, causing immediate reputational damage.'
+            ],
+            'WEBSERVER_BANNER': [
+                'Exposed version numbers (Apache 2.4.49, nginx 1.14.0) let attackers look up every known CVE for that exact version.',
+                'Automated vulnerability scanners immediately match version banners to exploit databases and queue attacks.',
+                'Version info reveals your patch cadence — an old version signals you may be slow to update.',
+                'In combination with other findings, version exposure helps attackers build a complete attack chain.'
+            ],
+            'SIMILARDOMAIN': [
+                'Typosquat domains (paypa1.com, g00gle.com) are used in phishing campaigns targeting your customers.',
+                'Attackers register similar domains and send emails impersonating your company to harvest credentials and payments.',
+                'A similar domain with a valid SSL cert looks legitimate — users can\'t tell without inspecting the full URL.',
+                'Lookalike domains can be used in MX spoofing to intercept email meant for your domain.'
+            ],
+            'AFFILIATE_INTERNET_NAME_HIJACKABLE': [
+                'An expired or unregistered subdomain can be claimed by anyone — an attacker registers it and hosts malicious content under your brand.',
+                'Subdomain takeover lets attackers host phishing pages on YOUR domain (e.g., store.yourdomain.com).',
+                'Your SPF/DKIM may still authorize a hijacked subdomain to send email appearing to come from you.',
+                'Search engines index hijacked subdomains under your domain\'s authority — malicious content ranks under your brand.'
+            ],
+            'URL_UPLOAD': [
+                'Unrestricted file upload endpoints can be used to upload web shells — giving attackers direct command execution.',
+                'Uploaded files without type validation can contain malware that executes when accessed.',
+                'Even image uploads can contain embedded malicious code in certain server configurations.',
+                'File upload endpoints are heavily targeted by automated scanners — one of the most common initial access vectors.'
+            ],
+            'URL_FLASH': [
+                'Adobe Flash reached end-of-life in December 2020 — it has hundreds of known unpatched CVEs.',
+                'Any visitor with Flash enabled is exposed to drive-by download attacks through your site.',
+                'Flash exploits are freely available — no skill required to exploit a Flash vulnerability.',
+                'Browsers that still support Flash are themselves outdated and likely have other vulnerabilities.'
+            ],
+            'DNS_SPF': [
+                'A missing or permissive SPF record allows anyone to send email appearing to come from your domain.',
+                'Email spoofing using your domain is used in BEC attacks to defraud your customers and partners.',
+                'Without proper SPF, phishing emails can pass spam filters because they appear to come from your legitimate domain.',
+                'SPF misconfigurations can cause legitimate emails from your services to be rejected as spam.'
+            ],
+            'ACCOUNT_EXTERNAL_OWNED_COMPROMISED': [
+                'Compromised third-party accounts (GitHub, Slack, Jira) can expose source code, internal comms, and project management tools.',
+                'OAuth tokens from compromised accounts can access APIs and services without needing a password.',
+                'Attackers pivot from compromised external accounts to internal systems through integrations and SSO.',
+                'A compromised GitHub account can be used to push malicious code or exfiltrate all private repositories.'
+            ],
+            'CLOUD_STORAGE_BUCKET': [
+                'If this bucket is public or misconfigured, files are accessible to anyone — check immediately.',
+                'Misconfigured buckets are found by bots scanning the internet for open storage endpoints.',
+                'Attackers search cloud buckets for database dumps, API keys, and source code.',
+                'Even "private" buckets can be exposed via pre-signed URLs that were accidentally shared.'
+            ]
+        };
+
+        var eventTypeFix = {
+            'VULNERABILITY_CVE_CRITICAL': 'I ran a SpiderFoot scan and found a CRITICAL CVE in software on my server or in my app dependencies.\n\nPlease help me:\n1. Identify which package or service is affected\n2. Find the patched version and upgrade path\n3. Apply the fix safely without breaking my application\n4. Check for indicators of compromise — this CVE may already have been exploited\n\nMy tech stack: [e.g., Node.js 18, Python 3.10, nginx 1.14, Ubuntu 22.04]\nFinding from the scan: [paste the CVE ID or software name here]',
+
+            'VULNERABILITY_CVE_HIGH': 'SpiderFoot found a HIGH severity CVE in software my server or app is running.\n\nPlease help me:\n1. Identify the vulnerable package or service\n2. Find and apply the security patch\n3. Verify the update didn\'t break anything\n4. Check if this CVE is being actively exploited in the wild\n\nMy tech stack: [describe your stack]\nFinding from the scan: [paste the CVE ID or software name here]',
+
+            'VULNERABILITY_CVE_MEDIUM': 'SpiderFoot found a MEDIUM severity CVE in my stack.\n\nPlease help me:\n1. Identify the affected package or service\n2. Determine if the conditions for exploitation apply to my setup\n3. Apply the patch or implement a mitigation\n\nMy tech stack: [describe your stack]\nFinding from the scan: [paste the CVE ID here]',
+
+            'VULNERABILITY_GENERAL': 'SpiderFoot found a general security weakness in my application or server.\n\nFinding details: [paste the exact finding from the scan]\n\nPlease help me:\n1. Understand the severity and exploitability of this weakness\n2. Identify which part of my code or config is responsible\n3. Implement the correct fix\n4. Add monitoring or detection for this type of issue going forward',
+
+            'SSL_CERTIFICATE_EXPIRED': 'My SSL certificate has expired (found by a SpiderFoot scan).\n\nPlease help me:\n1. Check my current cert setup (Let\'s Encrypt / manual / Cloudflare / hosting provider)\n2. Renew or reissue the certificate for my domain\n3. Verify the new cert is correctly installed and serving\n4. Set up automatic renewal so this never happens again\n\nMy server/setup: [nginx / Apache / Caddy / Docker / Cloudflare / etc.]\nDomain: [your domain]',
+
+            'SSL_CERTIFICATE_MISMATCH': 'SpiderFoot found an SSL certificate mismatch — the cert doesn\'t match the hostname.\n\nPlease help me:\n1. Diagnose why there\'s a mismatch (wrong cert installed, CDN misconfiguration, missing SAN entry)\n2. Issue or install the correct certificate\n3. Verify it\'s working with no browser warnings\n\nMy setup: [nginx / Apache / Cloudflare / load balancer / Docker]\nAffected hostname: [your domain or subdomain]',
+
+            'SSL_CERTIFICATE_EXPIRING': 'SpiderFoot flagged that my SSL certificate is expiring soon.\n\nPlease help me:\n1. Check the exact expiration date and urgency\n2. Renew the certificate before it expires\n3. Set up automated renewal (Let\'s Encrypt certbot, Cloudflare, etc.) so this is permanently handled\n\nMy setup: [nginx / Apache / Caddy / Cloudflare / hosting provider]\nDomain: [your domain]',
+
+            'TCP_PORT_OPEN': 'SpiderFoot found open TCP ports on my server that may not need to be publicly accessible.\n\nOpen ports found: [e.g., 3306 MySQL, 6379 Redis, 8080 admin panel]\n\nPlease help me:\n1. Audit my firewall rules (iptables / ufw / AWS Security Groups / GCP Firewall)\n2. Close or restrict ports that don\'t need to be public\n3. Move admin services behind a VPN or IP allowlist\n4. Verify the changes don\'t break my application\n\nMy server: [Ubuntu / CentOS / AWS EC2 / GCP / DigitalOcean / etc.]',
+
+            'UDP_PORT_OPEN': 'SpiderFoot found open UDP ports on my server that may be unnecessary.\n\nOpen UDP ports found: [list from the scan]\n\nPlease help me:\n1. Identify which services need these UDP ports\n2. Close or restrict any that are unnecessary\n3. Harden any that must remain open (e.g., restrict SNMP community strings, block DNS recursion from outside)\n\nMy server: [describe your infrastructure]',
+
+            'CLOUD_STORAGE_BUCKET_OPEN': 'SpiderFoot found a publicly accessible cloud storage bucket associated with my domain.\n\nBucket from scan: [paste the bucket URL or name]\n\nPlease help me:\n1. Check the bucket\'s contents for sensitive data immediately\n2. Restrict the bucket to private access only\n3. Set a bucket policy to prevent public access from being re-enabled accidentally\n4. Audit all buckets in my account for the same misconfiguration\n\nCloud provider: [AWS S3 / Google Cloud Storage / Azure Blob]',
+
+            'PUBLIC_CODE_REPO': 'SpiderFoot found a public code repository linked to my domain.\n\nRepo URL from scan: [paste the repo URL]\n\nPlease help me:\n1. Scan the full repo history for accidentally committed secrets (API keys, .env files, passwords, private keys)\n2. Immediately revoke any exposed credentials\n3. Clean git history with git-filter-repo or BFG Repo Cleaner if needed\n4. Set up pre-commit hooks and secret scanning to prevent future leaks\n\nLanguage/framework: [your stack]',
+
+            'INTERESTING_FILE': 'SpiderFoot found a file on my web server that shouldn\'t be publicly accessible.\n\nFile/URL found: [paste the exact URL from the scan]\n\nPlease help me:\n1. Check what this file contains\n2. Remove it from the web root or add an access restriction\n3. Check my web server config for other files that might be accidentally exposed\n4. Add rules to block access to common sensitive file patterns (.env, .bak, .sql, .git)\n\nMy web server: [nginx / Apache / Caddy]',
+
+            'ERROR_MESSAGE': 'SpiderFoot found that my application is exposing error messages or debug info publicly.\n\nExample URL or content from scan: [paste here]\n\nPlease help me:\n1. Find where debug mode is enabled in my app config and disable it\n2. Set up proper error handling that shows a user-friendly message without revealing internals\n3. Configure error logging to write to a server log instead of the HTTP response\n\nMy framework/stack: [e.g., Django, Express, Laravel, Rails, Flask]',
+
+            'INTERNAL_IP_ADDRESS': 'SpiderFoot found internal IP addresses (private network IPs) exposed in public-facing data.\n\nInternal IPs found: [list from scan]\nWhere they appeared: [error messages / HTTP headers / page source]\n\nPlease help me:\n1. Find where these IPs are leaking\n2. Remove or mask them from public-facing responses\n3. Configure my reverse proxy to strip internal headers\n\nMy stack: [nginx / Apache / Express / load balancer / etc.]',
+
+            'WEBSERVER_BANNER': 'SpiderFoot found that my web server is exposing its version number in response headers.\n\nBanner found: [paste the exact banner, e.g., Apache/2.4.51 or nginx/1.14.0]\n\nPlease help me:\n1. Disable or obscure the server version from all HTTP response headers\n2. Remove version info from error pages\n3. Check if this version has known CVEs and update if needed\n\nMy web server: [nginx / Apache / IIS / Caddy]',
+
+            'EMAILADDR_COMPROMISED': 'SpiderFoot found that email addresses linked to my domain appeared in data breach databases.\n\nCompromised emails: [list from scan]\n\nPlease help me:\n1. Force password resets for all affected accounts immediately\n2. Enable MFA/2FA on all affected accounts\n3. Check audit logs for unauthorized access since the breach date\n4. Rotate credentials for any sensitive systems these accounts had access to\n5. Set up monitoring (HaveIBeenPwned API) for future breaches involving our domain',
+
+            'PASSWORD_COMPROMISED': 'SpiderFoot found plaintext passwords linked to my domain in breach data. This is critical.\n\nPlease help me:\n1. Immediately invalidate all sessions for affected accounts\n2. Force password resets\n3. Enable MFA on all accounts\n4. Audit what the affected accounts had access to and assume full compromise\n5. Check for backdoors, unauthorized changes, or data exfiltration\n6. Notify affected users if this involves customer accounts (GDPR/compliance requirement)',
+
+            'URL_UPLOAD': 'SpiderFoot found a file upload endpoint on my application.\n\nUpload URL found: [paste the URL]\n\nPlease help me audit and secure this endpoint:\n1. Validate file types strictly on the server side (not just extension or client MIME type)\n2. Store uploads outside the web root so they can\'t be executed by the web server\n3. Scan uploads for malware before accepting them\n4. Add rate limiting and authentication to the upload endpoint\n5. Set Content-Disposition headers to prevent browsers from executing uploaded content\n\nMy backend framework: [your framework]',
+
+            'SIMILARDOMAIN': 'SpiderFoot found domain names similar to mine that could be used for phishing or brand abuse.\n\nSimilar domains found: [list from scan]\n\nPlease help me:\n1. Check if these domains are actively used for phishing (email or web content)\n2. Set up DMARC, DKIM, and SPF to protect against email spoofing using my domain\n3. Consider registering the most dangerous lookalike domains defensively\n4. Set up brand monitoring for my company name and domain variations\n5. Report any active phishing domains to the registrar and Google Safe Browsing',
+
+            'AFFILIATE_INTERNET_NAME_HIJACKABLE': 'SpiderFoot found a subdomain or affiliated domain that appears abandoned — vulnerable to takeover.\n\nHijackable domain/subdomain: [from scan]\n\nPlease help me:\n1. Verify the DNS record still points to an unclaimed resource (decommissioned Heroku app, GitHub Pages, S3 bucket)\n2. Either remove the dangling DNS record or re-claim the resource\n3. Audit all my subdomains for similar dangling DNS entries\n\nMy DNS provider: [Cloudflare / Route53 / GoDaddy / etc.]',
+
+            'DNS_SPF': 'SpiderFoot found a potential issue with my domain\'s SPF record.\n\nSPF record found: [paste the TXT record]\n\nPlease help me:\n1. Audit my current SPF record for permissiveness issues (+all is dangerous)\n2. Ensure all legitimate mail senders are included in the SPF record\n3. Add DKIM signing for all outgoing mail\n4. Set up a DMARC policy (start with p=none for monitoring, then move to p=reject)\n5. Test the configuration with MXToolbox or mail-tester.com\n\nEmail providers I use: [e.g., Gmail Workspace, SendGrid, Mailchimp]',
+
+            'DEFACED_INTERNET_NAME': 'SpiderFoot found that a site associated with my domain has been defaced. Attackers had write access.\n\nDefaced site: [from scan]\n\nPlease help me:\n1. Take the site offline immediately\n2. Identify how the attacker gained access (check server logs, CMS audit logs, file modification timestamps)\n3. Remove malicious content and restore from a clean backup\n4. Change ALL credentials (hosting panel, CMS admin, FTP, SSH, database)\n5. Scan for web shells or backdoors left behind\n6. Patch the vulnerability before going back online\n\nMy CMS/stack: [WordPress / custom app / etc.]',
+
+            'CLOUD_STORAGE_BUCKET': 'SpiderFoot found a cloud storage bucket associated with my domain.\n\nBucket found: [paste from scan]\n\nPlease help me:\n1. Verify whether this bucket is publicly accessible\n2. If public, restrict it to private access immediately\n3. Review what files it contains for any sensitive data\n4. Audit all buckets in my cloud account for public access\n5. Enable bucket versioning and access logging\n\nCloud provider: [AWS S3 / Google Cloud Storage / Azure Blob]'
+        };
+
         function showTypeInfo(typeId, typeName, total, unique) {
-            var desc = eventTypeHelp[typeId] || ('This data type was collected during the scan. Click the category name to browse all findings of this type.');
+            var desc = eventTypeHelp[typeId] || 'This data type was collected during the scan.';
+            var threats = eventTypeThreats[typeId];
+            var fix = eventTypeFix[typeId];
+
             document.getElementById('info-panel-title').textContent = typeName;
+
             var countsHtml = '';
             if (total !== undefined && total !== null) {
                 countsHtml = '<span class="badge alert-info">' + total + ' total</span> ' +
@@ -343,7 +632,48 @@
             }
             document.getElementById('info-panel-counts').innerHTML = countsHtml;
             document.getElementById('info-panel-desc').textContent = desc;
+
+            var threatsSection = document.getElementById('info-panel-threats-section');
+            var threatsList = document.getElementById('info-panel-threats');
+            if (threats && threats.length > 0) {
+                threatsList.innerHTML = threats.map(function(t) { return '<li>' + t + '</li>'; }).join('');
+                threatsSection.style.display = '';
+            } else {
+                threatsSection.style.display = 'none';
+            }
+
+            var fixSection = document.getElementById('info-panel-fix-section');
+            var fixPromptEl = document.getElementById('info-panel-fix-prompt');
+            if (fix) {
+                fixPromptEl.textContent = fix;
+                fixSection.style.display = '';
+            } else {
+                fixSection.style.display = 'none';
+            }
+
             document.getElementById('type-info-panel').classList.add('panel-open');
+        }
+
+        function copyFixPrompt() {
+            var text = document.getElementById('info-panel-fix-prompt').textContent;
+            var btn = document.getElementById('info-panel-copy-btn');
+            function showCopied() {
+                btn.innerHTML = '<i class="glyphicon glyphicon-ok"></i> Copied!';
+                setTimeout(function() {
+                    btn.innerHTML = '<i class="glyphicon glyphicon-copy"></i> Copy prompt';
+                }, 2000);
+            }
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(showCopied);
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showCopied();
+            }
         }
 
         function closeInfoPanel() {
