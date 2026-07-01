@@ -57,7 +57,7 @@
     .problem-card h3 { font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; }
     .problem-card p { font-size: 13.5px; color: #64748b; line-height: 1.6; }
     .problem-card.danger { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.04); box-shadow: 0 0 32px rgba(239,68,68,0.12), 0 4px 24px rgba(0,0,0,0.4); }
-    .problem-card.danger:hover { box-shadow: 0 0 48px rgba(239,68,68,0.22), 0 8px 32px rgba(0,0,0,0.5); transform: translateY(-2px); }
+    .problem-card.danger:hover { box-shadow: 0 0 48px rgba(239,68,68,0.22), 0 8px 32px rgba(0,0,0,0.5); transform: translateY(-4px) scale(1.02); }
 
     /* Scroll animations — slide from left/right/up */
     .slide-left  { opacity: 0; transform: translateX(-72px); }
@@ -82,14 +82,17 @@
     .finds-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 48px; }
     @media (max-width: 900px) { .finds-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 520px) { .finds-grid { grid-template-columns: 1fr; } }
-    .find-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 18px 20px; display: flex; align-items: flex-start; gap: 14px; }
+    .find-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 18px 20px; display: flex; align-items: flex-start; gap: 14px; transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease; }
+    .find-item:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 24px rgba(5,156,215,0.1); border-color: rgba(5,156,215,0.3); }
     .find-icon { flex-shrink: 0; width: 36px; height: 36px; background: rgba(5,156,215,0.1); border: 1px solid rgba(5,156,215,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #059CD7; }
     .find-text strong { display: block; font-size: 13.5px; color: #e2e8f0; font-weight: 600; margin-bottom: 3px; }
     .find-text span { font-size: 12px; color: #475569; line-height: 1.5; }
 
     /* Pricing */
     .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 56px; }
-    .pricing-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 32px; position: relative; }
+    .pricing-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 32px; position: relative; transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease; }
+    .pricing-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 32px rgba(5,156,215,0.12); border-color: rgba(5,156,215,0.3); }
+    .pricing-card.featured:hover { box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 40px rgba(5,156,215,0.22); }
     .pricing-card.featured { background: rgba(5,156,215,0.07); border-color: rgba(5,156,215,0.35); }
     .pricing-card .badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #059CD7; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
     .plan-name { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; margin-bottom: 8px; }
