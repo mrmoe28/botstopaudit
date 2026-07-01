@@ -70,6 +70,11 @@ class="nav-item"
     class="active"
 %endif
 class="nav-item"><a id="nav-link-settings" href="${docroot}/opts" class="nav-link"><i class="glyphicon glyphicon-wrench"></i>&nbsp;Settings</a></li>
+        <li
+% if pageid == "GUIDE":
+    class="active"
+%endif
+class="nav-item"><a id="nav-link-guide" href="${docroot}/guide"><i class="glyphicon glyphicon-book"></i>&nbsp;Guide</a></li>
  
       </ul>
 

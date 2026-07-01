@@ -907,6 +907,16 @@ class SpiderFootWebUi:
         return templ.render(rerunscans=True, docroot=self.docroot, pageid="SCANLIST", version=__version__)
 
     @cherrypy.expose
+    def guide(self: 'SpiderFootWebUi') -> str:
+        """BotStop user guide and tutorial page.
+
+        Returns:
+            str: Guide page HTML
+        """
+        templ = Template(filename='spiderfoot/templates/guide.tmpl', lookup=self.lookup)
+        return templ.render(pageid='GUIDE', docroot=self.docroot, version=__version__)
+
+    @cherrypy.expose
     def newscan(self: 'SpiderFootWebUi') -> str:
         """Configure a new scan.
 

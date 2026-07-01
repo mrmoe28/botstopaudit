@@ -1,0 +1,386 @@
+<%include file="HEADER.tmpl"/>
+
+<style>
+.guide-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  border-radius: 14px;
+  padding: 40px 48px;
+  margin-bottom: 32px;
+  border: 1px solid rgba(5,156,215,0.2);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+.guide-hero h1 { color: #fff; font-size: 2rem; font-weight: 700; margin: 0 0 8px; }
+.guide-hero p  { color: #94a3b8; font-size: 15px; margin: 0; }
+
+.guide-section { margin-bottom: 40px; }
+.guide-section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  border-left: 4px solid #059CD7;
+  padding-left: 12px;
+  margin-bottom: 20px;
+}
+
+/* Use-case cards */
+.usecase-grid { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; }
+.usecase-card {
+  flex: 1 1 calc(25% - 16px);
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.usecase-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(5,156,215,0.12);
+  border-color: #059CD7;
+}
+.usecase-icon { font-size: 28px; color: #059CD7; margin-bottom: 10px; }
+.usecase-title { font-weight: 700; font-size: 14px; color: #0f172a; margin-bottom: 6px; }
+.usecase-desc  { font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px; }
+.usecase-example {
+  background: #f8fafc;
+  border-left: 3px solid #059CD7;
+  border-radius: 0 6px 6px 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #475569;
+}
+.usecase-example strong { color: #0f172a; display: block; margin-bottom: 3px; }
+
+/* Steps */
+.steps { counter-reset: step; display: flex; flex-direction: column; gap: 12px; }
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.step-num {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #059CD7;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-body h4 { font-size: 14px; font-weight: 600; color: #0f172a; margin: 0 0 4px; }
+.step-body p  { font-size: 13px; color: #64748b; margin: 0; line-height: 1.5; }
+
+/* Results explanation */
+.result-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.result-card {
+  flex: 1 1 calc(33% - 12px);
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.result-card h4 { font-size: 13px; font-weight: 700; margin: 0 0 6px; }
+.result-card p  { font-size: 12.5px; color: #64748b; margin: 0; line-height: 1.5; }
+
+/* Severity badges */
+.sev { display: inline-block; border-radius: 5px; padding: 3px 10px; font-size: 11px; font-weight: 700; margin-right: 6px; }
+.sev-critical { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+.sev-high     { background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; }
+.sev-medium   { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+.sev-low      { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+.sev-info     { background: #f0f9ff; color: #0c4a6e; border: 1px solid #7dd3fc; }
+
+/* API key table */
+.api-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.api-table th {
+  background: #f8fafc; color: #64748b; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 10px 14px; border-bottom: 2px solid #e2e8f0; text-align: left;
+}
+.api-table td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+.api-table tr:last-child td { border-bottom: none; }
+.api-table tr:hover td { background: #f8fafc; }
+.free-badge { background: #f0fdf4; color: #166534; border: 1px solid #86efac; border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
+.paid-badge { background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
+
+/* Dark mode overrides */
+body.dark-theme .guide-section-title { color: #e2e8f0; }
+body.dark-theme .usecase-card,
+body.dark-theme .step,
+body.dark-theme .result-card {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(5,156,215,0.18) !important;
+  color: #cbd5e1;
+}
+body.dark-theme .usecase-title,
+body.dark-theme .step-body h4,
+body.dark-theme .result-card h4 { color: #e2e8f0; }
+body.dark-theme .usecase-example { background: rgba(5,156,215,0.07); color: #94a3b8; }
+body.dark-theme .api-table th { background: rgba(5,156,215,0.07); color: #64748b; border-color: rgba(5,156,215,0.15); }
+body.dark-theme .api-table td { color: #cbd5e1; border-color: rgba(255,255,255,0.04); }
+body.dark-theme .api-table tr:hover td { background: rgba(5,156,215,0.06) !important; }
+</style>
+
+<!-- Hero -->
+<div class="guide-hero">
+  <h1><i class="glyphicon glyphicon-book"></i>&nbsp; BotStop User Guide</h1>
+  <p>Learn how to run scans, read results, and get the most out of BotStop's OSINT capabilities.</p>
+</div>
+
+<!-- Quick Start -->
+<div class="guide-section">
+  <div class="guide-section-title">Quick Start — Run Your First Scan in 3 Steps</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Click "New Scan" in the top nav</h4>
+        <p>Choose a scan mode that matches your goal (see Use Cases below). Enter your target — a domain, email address, IP, or username.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Click the red "Scan" button and wait</h4>
+        <p>BotStop runs dozens of modules in parallel. A domain scan typically takes 5–20 minutes depending on how many modules are enabled and your concurrency setting (Settings → Global → Max concurrent modules).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Review your results in the Report and Summary tabs</h4>
+        <p>The <strong>Report</strong> tab gives a plain-English summary with prioritised findings. The <strong>Summary</strong> tab shows counts by category. Use <strong>Browse</strong> to dig into specific data types, and <strong>Correlations</strong> to see patterns across findings.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Use Cases -->
+<div class="guide-section">
+  <div class="guide-section-title">Scan Modes &amp; Use Cases</div>
+  <div class="usecase-grid">
+
+    <div class="usecase-card">
+      <div class="usecase-icon"><i class="glyphicon glyphicon-search"></i></div>
+      <div class="usecase-title">Investigate</div>
+      <div class="usecase-desc">Look up a person, organisation, domain, email, or username. Maps relationships and gathers open-source intelligence.</div>
+      <div class="usecase-example">
+        <strong>Example targets:</strong>
+        <code>ops.lock28.com</code> &nbsp;·&nbsp; <code>john@example.com</code> &nbsp;·&nbsp; <code>@username</code>
+      </div>
+    </div>
+
+    <div class="usecase-card">
+      <div class="usecase-icon"><i class="glyphicon glyphicon-eye-open"></i></div>
+      <div class="usecase-title">Check My Exposure</div>
+      <div class="usecase-desc">Map what your domain or company leaks publicly — open ports, exposed services, leaked credentials, DNS misconfigs, S3 buckets.</div>
+      <div class="usecase-example">
+        <strong>Best for:</strong>
+        Your own domain or IP range. Run this monthly to catch new exposures.
+      </div>
+    </div>
+
+    <div class="usecase-card">
+      <div class="usecase-icon"><i class="glyphicon glyphicon-ok-circle"></i></div>
+      <div class="usecase-title">Verify a Sender</div>
+      <div class="usecase-desc">Check whether an email address, link, or domain is legitimate. Useful for vetting suspicious emails or unknown contacts.</div>
+      <div class="usecase-example">
+        <strong>Example:</strong>
+        Paste a suspicious email address or domain to check blacklists, WHOIS age, and phishing indicators.
+      </div>
+    </div>
+
+    <div class="usecase-card">
+      <div class="usecase-icon"><i class="glyphicon glyphicon-flash"></i></div>
+      <div class="usecase-title">Full Deep Scan</div>
+      <div class="usecase-desc">Everything — slow but the most thorough. Runs all available modules including passive DNS, dark web mentions, certificate transparency, and more.</div>
+      <div class="usecase-example">
+        <strong>Note:</strong>
+        Can take 30–60+ minutes. Best for quarterly security reviews or pre-launch audits.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Reading Results -->
+<div class="guide-section">
+  <div class="guide-section-title">Reading Your Results</div>
+
+  <p style="font-size:13.5px; color:#475569; margin-bottom:16px;">Each scan result tab shows a different view of the same collected data:</p>
+
+  <div class="result-grid" style="margin-bottom:24px;">
+    <div class="result-card">
+      <h4 style="color:#059CD7;">Summary</h4>
+      <p>Counts of findings grouped by data type (HTTP Headers, DNS Records, Open Ports, etc.). Click any category to jump to the raw data in Browse.</p>
+    </div>
+    <div class="result-card">
+      <h4 style="color:#059CD7;">Correlations</h4>
+      <p>BotStop's automated analysis — patterns that are suspicious or noteworthy, like "host reported malicious by 3+ sources" or "exposed database port." Prioritise these first.</p>
+    </div>
+    <div class="result-card">
+      <h4 style="color:#059CD7;">Browse</h4>
+      <p>Raw findings organised by category. Filter by type to find specific data like email addresses found, subdomains, or leaked credentials.</p>
+    </div>
+    <div class="result-card">
+      <h4 style="color:#059CD7;">Graph</h4>
+      <p>Visual relationship map connecting your target to everything BotStop discovered. Useful for seeing how entities link together.</p>
+    </div>
+    <div class="result-card">
+      <h4 style="color:#059CD7;">Report</h4>
+      <p>Plain-English security summary with actionable fix prompts. Start here if you're new or want a fast overview of what matters.</p>
+    </div>
+    <div class="result-card">
+      <h4 style="color:#059CD7;">Log</h4>
+      <p>Live module-by-module activity log. Useful for debugging why a specific module didn't return data (often means an API key is missing).</p>
+    </div>
+  </div>
+
+  <div class="guide-section-title" style="font-size:1rem;">Correlation Severity Levels</div>
+  <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <tr>
+        <td style="padding:8px 0; border-bottom:1px solid #f1f5f9; width:110px;"><span class="sev sev-critical">CRITICAL</span></td>
+        <td style="padding:8px 12px; border-bottom:1px solid #f1f5f9; color:#64748b;">Active exploitation likely — leaked credentials, ransomware-linked IPs, publicly exposed admin panels. Fix immediately.</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0; border-bottom:1px solid #f1f5f9;"><span class="sev sev-high">HIGH</span></td>
+        <td style="padding:8px 12px; border-bottom:1px solid #f1f5f9; color:#64748b;">Serious exposure — open database ports, missing DMARC/SPF, server version disclosure, phishing lookalike domains.</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0; border-bottom:1px solid #f1f5f9;"><span class="sev sev-medium">MEDIUM</span></td>
+        <td style="padding:8px 12px; border-bottom:1px solid #f1f5f9; color:#64748b;">Worth investigating — co-hosted with suspicious domains, weak SSL config, older software versions detected.</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0; border-bottom:1px solid #f1f5f9;"><span class="sev sev-low">LOW</span></td>
+        <td style="padding:8px 12px; border-bottom:1px solid #f1f5f9; color:#64748b;">Informational risk — minor misconfigurations, low-signal indicators. Monitor but not urgent.</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;"><span class="sev sev-info">INFO</span></td>
+        <td style="padding:8px 12px; color:#64748b;">Data points with no risk implication — useful for building a picture of your attack surface.</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- API Keys -->
+<div class="guide-section">
+  <div class="guide-section-title">API Keys — Which Ones Matter Most</div>
+  <p style="font-size:13.5px; color:#475569; margin-bottom:16px;">
+    Modules with a <i class="glyphicon glyphicon-lock"></i> in Settings require an API key. Without a key the module is skipped silently.
+    Add keys under <a href="${docroot}/opts">Settings</a> → click the module name → paste the key in the Value field → Save Changes.
+  </p>
+  <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+    <table class="api-table">
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>What it adds</th>
+          <th>Cost</th>
+          <th>Priority</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Shodan</strong></td>
+          <td>Open ports, banners, exposed services across the internet</td>
+          <td><span class="free-badge">Free tier</span></td>
+          <td>⭐⭐⭐ High</td>
+        </tr>
+        <tr>
+          <td><strong>VirusTotal</strong></td>
+          <td>Malware, phishing, blacklist checks on domains/IPs/URLs</td>
+          <td><span class="free-badge">Free tier</span></td>
+          <td>⭐⭐⭐ High</td>
+        </tr>
+        <tr>
+          <td><strong>HaveIBeenPwned</strong></td>
+          <td>Email addresses found in known data breaches</td>
+          <td><span class="paid-badge">Paid</span></td>
+          <td>⭐⭐⭐ High</td>
+        </tr>
+        <tr>
+          <td><strong>Hunter.io</strong></td>
+          <td>Email addresses associated with a domain</td>
+          <td><span class="free-badge">Free tier</span></td>
+          <td>⭐⭐ Medium</td>
+        </tr>
+        <tr>
+          <td><strong>AlienVault OTX</strong></td>
+          <td>Threat intelligence, malicious IP/domain reputation</td>
+          <td><span class="free-badge">Free</span></td>
+          <td>⭐⭐ Medium</td>
+        </tr>
+        <tr>
+          <td><strong>SecurityTrails</strong></td>
+          <td>Historical DNS, subdomain enumeration, WHOIS history</td>
+          <td><span class="free-badge">Free tier</span></td>
+          <td>⭐⭐ Medium</td>
+        </tr>
+        <tr>
+          <td><strong>Bing</strong></td>
+          <td>Web search results — finds indexed pages and mentions</td>
+          <td><span class="paid-badge">Azure key</span></td>
+          <td>⭐ Low</td>
+        </tr>
+        <tr>
+          <td><strong>IPInfo</strong></td>
+          <td>Geolocation and ASN data for IP addresses</td>
+          <td><span class="free-badge">Free tier</span></td>
+          <td>⭐ Low</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Tips -->
+<div class="guide-section">
+  <div class="guide-section-title">Pro Tips</div>
+  <div style="display:flex; flex-wrap:wrap; gap:12px;">
+
+    <div style="flex:1 1 calc(50% - 12px); min-width:260px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <h4 style="font-size:13px; font-weight:700; color:#0f172a; margin:0 0 6px;"><i class="glyphicon glyphicon-repeat" style="color:#059CD7;"></i>&nbsp; Schedule Regular Scans</h4>
+      <p style="font-size:13px; color:#64748b; margin:0; line-height:1.5;">Run "Check My Exposure" on your primary domain monthly. New subdomains, misconfigured services, and leaked credentials appear over time — you want to find them before attackers do.</p>
+    </div>
+
+    <div style="flex:1 1 calc(50% - 12px); min-width:260px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <h4 style="font-size:13px; font-weight:700; color:#0f172a; margin:0 0 6px;"><i class="glyphicon glyphicon-filter" style="color:#059CD7;"></i>&nbsp; Use the Correlations Tab First</h4>
+      <p style="font-size:13px; color:#64748b; margin:0; line-height:1.5;">BotStop can return thousands of raw data points. Start with Correlations — BotStop's engine has already filtered for what's actually suspicious, saving you hours of manual review.</p>
+    </div>
+
+    <div style="flex:1 1 calc(50% - 12px); min-width:260px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <h4 style="font-size:13px; font-weight:700; color:#0f172a; margin:0 0 6px;"><i class="glyphicon glyphicon-envelope" style="color:#059CD7;"></i>&nbsp; Always Check Email Security</h4>
+      <p style="font-size:13px; color:#64748b; margin:0; line-height:1.5;">For any domain you own, verify SPF, DKIM, and DMARC are configured correctly. Missing or broken email auth is one of the most common ways attackers spoof your brand in phishing emails.</p>
+    </div>
+
+    <div style="flex:1 1 calc(50% - 12px); min-width:260px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <h4 style="font-size:13px; font-weight:700; color:#0f172a; margin:0 0 6px;"><i class="glyphicon glyphicon-cloud" style="color:#059CD7;"></i>&nbsp; Watch for Subdomain &amp; Cloud Exposure</h4>
+      <p style="font-size:13px; color:#64748b; margin:0; line-height:1.5;">Forgotten subdomains and misconfigured S3/GCS buckets are silent data leaks. Scan your domain with "Full Deep Scan" and filter Browse results for "S3 Bucket" and "Subdomain" categories.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- CTA -->
+<div style="background:linear-gradient(135deg,#0f172a,#1e3a5f); border-radius:14px; padding:32px 40px; text-align:center; margin-bottom:32px; border:1px solid rgba(5,156,215,0.2);">
+  <h3 style="color:#fff; font-weight:700; margin:0 0 8px;">Ready to run your first scan?</h3>
+  <p style="color:#94a3b8; margin:0 0 20px; font-size:14px;">Enter your domain, email, or IP and BotStop will do the rest.</p>
+  <a href="${docroot}/newscan" class="btn btn-primary" style="font-size:14px; padding:10px 28px; border-radius:8px; background:#059CD7; border-color:#048ab8;">
+    <i class="glyphicon glyphicon-screenshot"></i>&nbsp; New Scan
+  </a>
+</div>
+
+<%include file="FOOTER.tmpl"/>
