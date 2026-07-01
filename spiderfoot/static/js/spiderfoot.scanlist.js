@@ -189,7 +189,7 @@ function showlisttable(types, filter, data) {
 
     buttons += "</div>";
     var table = "<table id='scanlist' class='table table-bordered table-striped'>";
-    table += "<thead><tr><th class='sorter-false text-center'><input id='checkall' type='checkbox'></th> <th>Name</th> <th>Target</th> <th>Started</th> <th >Finished</th> <th class='text-center'>Status</th> <th class='text-center'>Elements</th><th class='text-center'>Correlations</th><th class='sorter-false text-center'>Action</th> </tr></thead><tbody>";
+    table += "<thead><tr><th class='sorter-false text-center'><input id='checkall' type='checkbox'></th> <th>Name</th> <th>Target</th> <th>Started</th> <th >Finished</th> <th class='text-center'>Status</th> <th class='text-center'>Elements</th><th class='text-center'>Correlations</th><th class='text-center'>Exposure</th><th class='sorter-false text-center'>Action</th> </tr></thead><tbody>";
     filtered = 0;
     for (var i = 0; i < data.length; i++) {
         if (types != null && $.inArray(data[i][6], types)) {
@@ -223,6 +223,9 @@ function showlisttable(types, filter, data) {
         table += "<span class='badge alert-info'>" + data[i][8]['LOW'] + "</span>";
         table += "<span class='badge alert-success'>" + data[i][8]['INFO'] + "</span>";
         table += "</td>";
+        var score = data[i][9] || 0;
+        var scoreCls = score >= 70 ? 'alert-danger' : score >= 40 ? 'alert-warning' : score >= 10 ? 'alert-info' : 'alert-success';
+        table += "<td class='text-center'><span class='badge " + scoreCls + "'>" + score + "</span></td>";
         table += "<td class='text-center'>";
         if (data[i][6] == "RUNNING" || data[i][6] == "STARTING" || data[i][6] == "STARTED" || data[i][6] == "INITIALIZING") {
             table += "<a rel='tooltip' title='Stop Scan' href='javascript:stopScan(\"" + data[i][0] + "\");'><i class='glyphicon glyphicon-stop text-muted'></i></a>";
@@ -234,7 +237,7 @@ function showlisttable(types, filter, data) {
         table += "</td></tr>";
     }
 
-    table += '</tbody><tfoot><tr><th colspan="8" class="ts-pager form-inline">';
+    table += '</tbody><tfoot><tr><th colspan="9" class="ts-pager form-inline">';
     table += '<div class="btn-group btn-group-sm" role="group">';
     table += '<button type="button" class="btn btn-default first"><span class="glyphicon glyphicon-step-backward"></span></button>';
     table += '<button type="button" class="btn btn-default prev"><span class="glyphicon glyphicon-backward"></span></button>';

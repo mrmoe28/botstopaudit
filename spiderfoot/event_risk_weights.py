@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+# Risk weights (0-100) per event type, used to compute a scan exposure score.
+# Only event types that represent a meaningful security risk are listed.
+# Unlisted types contribute 0 to the score.
+#
+# Score formula (in db.scanExposureScore):
+#   contribution = weight * (max_confidence / 100)
+#   exposure_score = min(100, sum of all contributions)
+
+EVENT_RISK_WEIGHTS = {
+    # --- Critical / Immediate Action ---
+    "VULNERABILITY_CVE_CRITICAL": 100,
+    "PASSWORD_COMPROMISED": 95,
+    "MALICIOUS_IPADDR": 90,
+    "MALICIOUS_INTERNET_NAME": 90,
+    "MALICIOUS_EMAILADDR": 88,
+    "MALICIOUS_ASN": 85,
+    "MALICIOUS_NETBLOCK": 82,
+    "MALICIOUS_COHOST": 75,
+    "MALICIOUS_AFFILIATE_INTERNET_NAME": 70,
+    "MALICIOUS_AFFILIATE_IPADDR": 68,
+    "MALICIOUS_SUBNET": 65,
+    "MALICIOUS_BITCOIN_ADDRESS": 70,
+    "MALICIOUS_PHONE_NUMBER": 60,
+    "DEFACED_INTERNET_NAME": 90,
+    "DEFACED_IPADDR": 88,
+    "DEFACED_AFFILIATE_INTERNET_NAME": 75,
+    "DEFACED_COHOST": 70,
+    "DEFACED_AFFILIATE_IPADDR": 68,
+
+    # --- High Risk ---
+    "VULNERABILITY_CVE_HIGH": 85,
+    "CLOUD_STORAGE_BUCKET_OPEN": 80,
+    "EMAILADDR_COMPROMISED": 78,
+    "HASH_COMPROMISED": 78,
+    "PHONE_NUMBER_COMPROMISED": 65,
+    "ACCOUNT_EXTERNAL_OWNED_COMPROMISED": 75,
+    "ACCOUNT_EXTERNAL_USER_SHARED_COMPROMISED": 70,
+    "DARKNET_MENTION_URL": 72,
+    "LEAKSITE_URL": 70,
+    "AFFILIATE_DOMAIN_UNREGISTERED": 65,
+    "AFFILIATE_INTERNET_NAME_HIJACKABLE": 72,
+
+    # --- Medium Risk ---
+    "VULNERABILITY_CVE_MEDIUM": 60,
+    "VULNERABILITY_GENERAL": 50,
+    "VULNERABILITY_DISCLOSURE": 45,
+    "BLACKLISTED_IPADDR": 55,
+    "BLACKLISTED_INTERNET_NAME": 52,
+    "BLACKLISTED_AFFILIATE_IPADDR": 45,
+    "BLACKLISTED_AFFILIATE_INTERNET_NAME": 42,
+    "BLACKLISTED_COHOST": 38,
+    "BLACKLISTED_SUBNET": 40,
+    "BLACKLISTED_NETBLOCK": 42,
+    "SSL_CERTIFICATE_MISMATCH": 50,
+    "SSL_CERTIFICATE_EXPIRED": 45,
+    "SSL_CERTIFICATE_EXPIRING": 25,
+    "INTERESTING_FILE": 40,
+    "ERROR_MESSAGE": 35,
+
+    # --- Low Risk / Informational ---
+    "VULNERABILITY_CVE_LOW": 30,
+    "INTERNAL_IP_ADDRESS": 30,
+    "UDP_PORT_OPEN": 20,
+    "TOR_EXIT_NODE": 25,
+    "PROXY_HOST": 20,
+    "VPN_HOST": 15,
+    "PUBLIC_CODE_REPO": 30,
+    "JUNK_FILE": 15,
+    "URL_UPLOAD": 20,
+    "URL_PASSWORD": 15,
+}

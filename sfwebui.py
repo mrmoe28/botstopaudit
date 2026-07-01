@@ -1664,7 +1664,8 @@ class SpiderFootWebUi:
             else:
                 finished = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(row[5]))
 
-            retdata.append([row[0], row[1], row[2], created, started, finished, row[6], row[7], riskmatrix])
+            exposure = dbh.scanExposureScore(row[0])
+            retdata.append([row[0], row[1], row[2], created, started, finished, row[6], row[7], riskmatrix, exposure])
 
         return retdata
 
@@ -1699,7 +1700,8 @@ class SpiderFootWebUi:
             for c in correlations:
                 riskmatrix[c[0]] = c[1]
 
-        return [data[0], data[1], created, started, ended, data[5], riskmatrix]
+        exposure = dbh.scanExposureScore(id)
+        return [data[0], data[1], created, started, ended, data[5], riskmatrix, exposure]
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

@@ -47,14 +47,28 @@
     .section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #059CD7; margin-bottom: 12px; }
     .section-title { font-size: clamp(26px, 4vw, 40px); font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 16px; letter-spacing: -0.5px; }
     .section-sub { font-size: 17px; color: #64748b; max-width: 540px; line-height: 1.65; }
+    .section-centered { text-align: center; }
+    .section-centered .section-sub { margin: 0 auto 0; }
 
     /* Problem */
     .problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 48px; }
-    .problem-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; }
-    .problem-card .icon { font-size: 28px; margin-bottom: 12px; }
+    .problem-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; transition: box-shadow 0.3s, transform 0.3s; }
+    .problem-card .icon { width: 44px; height: 44px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #f87171; margin-bottom: 14px; }
     .problem-card h3 { font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; }
     .problem-card p { font-size: 13.5px; color: #64748b; line-height: 1.6; }
-    .problem-card.danger { border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.04); }
+    .problem-card.danger { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.04); box-shadow: 0 0 32px rgba(239,68,68,0.12), 0 4px 24px rgba(0,0,0,0.4); }
+    .problem-card.danger:hover { box-shadow: 0 0 48px rgba(239,68,68,0.22), 0 8px 32px rgba(0,0,0,0.5); transform: translateY(-2px); }
+
+    /* Scroll animations — slide from left/right/up */
+    .slide-left  { opacity: 0; transform: translateX(-72px); }
+    .slide-right { opacity: 0; transform: translateX( 72px); }
+    .fade-up     { opacity: 0; transform: translateY( 36px); }
+    .slide-left, .slide-right, .fade-up {
+      transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1);
+    }
+    .slide-left.visible, .slide-right.visible, .fade-up.visible {
+      opacity: 1; transform: translate(0,0);
+    }
 
     /* How it works */
     .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0; margin-top: 56px; position: relative; }
@@ -65,9 +79,11 @@
     .step p { font-size: 13.5px; color: #64748b; line-height: 1.6; }
 
     /* What we find */
-    .finds-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 48px; }
-    .find-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 18px 20px; display: flex; align-items: flex-start; gap: 12px; }
-    .find-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .finds-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 48px; }
+    @media (max-width: 900px) { .finds-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .finds-grid { grid-template-columns: 1fr; } }
+    .find-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 18px 20px; display: flex; align-items: flex-start; gap: 14px; }
+    .find-icon { flex-shrink: 0; width: 36px; height: 36px; background: rgba(5,156,215,0.1); border: 1px solid rgba(5,156,215,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #059CD7; }
     .find-text strong { display: block; font-size: 13.5px; color: #e2e8f0; font-weight: 600; margin-bottom: 3px; }
     .find-text span { font-size: 12px; color: #475569; line-height: 1.5; }
 
@@ -165,28 +181,28 @@
 </div>
 
 <!-- Problem -->
-<section>
-  <div class="section-label">The Problem</div>
-  <h2 class="section-title">Your business is leaking information<br>you don't know about</h2>
-  <p class="section-sub">Attackers spend hours researching targets before striking. Most businesses have no idea what's visible from the outside until it's too late.</p>
+<section class="section-centered">
+  <div class="section-label slide-left">The Problem</div>
+  <h2 class="section-title slide-left">Your business is leaking information<br>you don't know about</h2>
+  <p class="section-sub slide-left">Attackers spend hours researching targets before striking. Most businesses have no idea what's visible from the outside until it's too late.</p>
   <div class="problem-grid">
-    <div class="problem-card danger">
-      <div class="icon">📧</div>
+    <div class="problem-card danger slide-left">
+      <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
       <h3>Email Spoofing Risk</h3>
       <p>Missing DMARC records let anyone send emails that look like they're from your company — enabling phishing attacks on your customers.</p>
     </div>
-    <div class="problem-card danger">
-      <div class="icon">🔍</div>
+    <div class="problem-card danger slide-left">
+      <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg></div>
       <h3>Leaked Credentials</h3>
       <p>Breached email and password combinations from past data breaches are freely available online and actively used to break into business accounts.</p>
     </div>
-    <div class="problem-card danger">
-      <div class="icon">🌐</div>
+    <div class="problem-card danger slide-right">
+      <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg></div>
       <h3>Exposed Infrastructure</h3>
       <p>Forgotten subdomains, dev servers, and open database ports are indexed publicly and routinely scanned by automated bots.</p>
     </div>
-    <div class="problem-card danger">
-      <div class="icon">🎭</div>
+    <div class="problem-card danger slide-right">
+      <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
       <h3>Lookalike Domains</h3>
       <p>Typosquatted domains (e.g. acme-corp.com vs acmecorp.com) are registered by attackers for phishing campaigns targeting your brand.</p>
     </div>
@@ -195,21 +211,21 @@
 
 <!-- How it works -->
 <section id="how-it-works" style="background: rgba(255,255,255,0.015); border-radius: 20px; max-width: 100%; padding: 80px 0;">
-  <div style="max-width: 1100px; margin: 0 auto; padding: 0 24px;">
+  <div style="max-width: 1100px; margin: 0 auto; padding: 0 24px;" class="section-centered">
     <div class="section-label">How It Works</div>
     <h2 class="section-title">Three steps to full visibility</h2>
     <div class="steps">
-      <div class="step">
+      <div class="step slide-left">
         <div class="step-num">1</div>
         <h3>Enter a Target</h3>
         <p>Type your domain, email address, or IP. BotStop accepts any public identifier tied to your business.</p>
       </div>
-      <div class="step">
+      <div class="step fade-up">
         <div class="step-num">2</div>
         <h3>BotStop Scans</h3>
         <p>200+ passive sources are queried — DNS records, breach databases, threat feeds, SSL certs, social profiles, and more.</p>
       </div>
-      <div class="step">
+      <div class="step slide-right">
         <div class="step-num">3</div>
         <h3>Get Your Report</h3>
         <p>Findings are categorized by severity with plain-English explanations and specific fix instructions for each issue.</p>
@@ -219,53 +235,53 @@
 </section>
 
 <!-- What we find -->
-<section>
+<section class="section-centered">
   <div class="section-label">What We Detect</div>
   <h2 class="section-title">Everything a threat actor would research</h2>
   <p class="section-sub">BotStop queries the same public sources attackers use — but delivers results in a report that makes sense to non-technical business owners.</p>
   <div class="finds-grid">
-    <div class="find-item">
-      <div class="find-icon">📬</div>
+    <div class="find-item slide-left">
+      <div class="find-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
       <div class="find-text"><strong>Email Security</strong><span>DMARC, SPF, DKIM gaps that allow email spoofing</span></div>
     </div>
-    <div class="find-item">
-      <div class="find-icon">🔑</div>
+    <div class="find-item slide-right">
+      <div class="find-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg></div>
       <div class="find-text"><strong>Breached Passwords</strong><span>Credentials for your domain found in known data breaches</span></div>
     </div>
-    <div class="find-item">
-      <div class="find-icon">🗺️</div>
+    <div class="find-item slide-left">
+      <div class="find-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
       <div class="find-text"><strong>Subdomain Exposure</strong><span>Forgotten or misconfigured subdomains visible to the public</span></div>
     </div>
-    <div class="find-item">
-      <div class="find-icon">🚪</div>
-      <div class="find-text"><strong>Open Ports & Services</strong><span>Databases, admin panels, and dev tools exposed to the internet</span></div>
+    <div class="find-item slide-right">
+      <div class="find-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg></div>
+      <div class="find-text"><strong>Open Ports &amp; Services</strong><span>Databases, admin panels, and dev tools exposed to the internet</span></div>
     </div>
-    <div class="find-item">
-      <div class="find-icon">🎣</div>
+    <div class="find-item slide-left">
+      <div class="find-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
       <div class="find-text"><strong>Lookalike Domains</strong><span>Typosquatted domains being used for phishing</span></div>
     </div>
-    <div class="find-item">
-      <div class="find-icon">🛡️</div>
+    <div class="find-item slide-right">
+      <div class="find-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
       <div class="find-text"><strong>Threat Intelligence</strong><span>Whether your IPs appear on blacklists or malware feeds</span></div>
     </div>
-    <div class="find-item">
-      <div class="find-icon">📋</div>
+    <div class="find-item slide-left">
+      <div class="find-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
       <div class="find-text"><strong>SSL / Certificate Issues</strong><span>Expired certs, weak configs, certificate transparency anomalies</span></div>
     </div>
-    <div class="find-item">
-      <div class="find-icon">👤</div>
-      <div class="find-text"><strong>People & Social</strong><span>Publicly indexed employee data that aids social engineering</span></div>
+    <div class="find-item slide-right">
+      <div class="find-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="find-text"><strong>People &amp; Social</strong><span>Publicly indexed employee data that aids social engineering</span></div>
     </div>
   </div>
 </section>
 
 <!-- Pricing -->
-<section id="pricing">
+<section id="pricing" class="section-centered">
   <div class="section-label">Pricing</div>
   <h2 class="section-title">Simple, honest pricing</h2>
   <p class="section-sub">No long-term contracts. Cancel any time. All plans include the full BotStop scan engine.</p>
   <div class="pricing-grid">
-    <div class="pricing-card">
+    <div class="pricing-card slide-left">
       <div class="plan-name">Starter</div>
       <div class="plan-price"><sup>$</sup>0<span class="per"> / free</span></div>
       <p class="plan-desc">For businesses wanting to understand their exposure before committing.</p>
@@ -277,7 +293,7 @@
       </ul>
       <a href="${docroot}/newscan" class="plan-btn plan-btn-ghost">Run Free Scan</a>
     </div>
-    <div class="pricing-card featured">
+    <div class="pricing-card featured fade-up">
       <div class="badge">Most Popular</div>
       <div class="plan-name">Professional</div>
       <div class="plan-price"><sup>$</sup>97<span class="per"> / month</span></div>
@@ -285,13 +301,13 @@
       <ul class="plan-features">
         <li>Unlimited scans</li>
         <li>Full findings detail</li>
-        <li>PDF client reports</li>
+        <li>PDF report template</li>
         <li>Authorization form template</li>
         <li>Priority support</li>
       </ul>
       <a href="mailto:ekosolarize@gmail.com?subject=BotStop Professional" class="plan-btn plan-btn-primary">Get Started</a>
     </div>
-    <div class="pricing-card">
+    <div class="pricing-card slide-right">
       <div class="plan-name">Agency</div>
       <div class="plan-price"><sup>$</sup>297<span class="per"> / month</span></div>
       <p class="plan-desc">For MSPs and security consultants managing multiple clients.</p>
@@ -330,5 +346,23 @@
   </div>
 </footer>
 
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const delay = parseInt(entry.target.dataset.delay) || 0;
+        setTimeout(() => entry.target.classList.add('visible'), delay);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.slide-left, .slide-right, .fade-up').forEach((el) => {
+    const siblings = el.parentElement.querySelectorAll('.slide-left, .slide-right, .fade-up');
+    const idx = Array.from(siblings).indexOf(el);
+    el.dataset.delay = idx * 90;
+    observer.observe(el);
+  });
+</script>
 </body>
 </html>

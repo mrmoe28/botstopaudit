@@ -1435,6 +1435,54 @@ class SpiderFootDb:
             except sqlite3.Error as e:
                 raise IOError(f"SQL error encountered when storing event data ({self.dbh})") from e
 
+    def scanEventUpdateConfidence(self, instanceId: str, eventHash: str, confidenceDelta: int) -> None:
+        """Increase the confidence of an already-stored event (corroboration by a second source).
+
+        Args:
+            instanceId (str): scan instance ID
+            eventHash (str): hash of the event to update
+            confidenceDelta (int): amount to add to confidence (result is capped at 100)
+
+        Raises:
+            IOError: database I/O failed
+        """
+        qry = "UPDATE tbl_scan_results SET confidence = MIN(100, confidence + ?) \
+               WHERE scan_instance_id = ? AND hash = ?"
+        with self.dbhLock:
+            try:
+                self.dbh.execute(qry, [confidenceDelta, instanceId, eventHash])
+                self.conn.commit()
+            except sqlite3.Error as e:
+                raise IOError("SQL error encountered when updating event confidence") from e
+
+    def scanExposureScore(self, instanceId: str) -> int:
+        """Compute a 0-100 exposure score for a scan from event types and confidence.
+
+        Args:
+            instanceId (str): scan instance ID
+
+        Returns:
+            int: exposure score 0-100
+        """
+        from spiderfoot.event_risk_weights import EVENT_RISK_WEIGHTS
+
+        qry = "SELECT type, MAX(confidence) FROM tbl_scan_results \
+               WHERE scan_instance_id = ? AND false_positive = 0 GROUP BY type"
+        with self.dbhLock:
+            try:
+                self.dbh.execute(qry, [instanceId])
+                rows = self.dbh.fetchall()
+            except Exception:
+                return 0
+
+        score = 0.0
+        for event_type, max_conf in rows:
+            weight = EVENT_RISK_WEIGHTS.get(event_type, 0)
+            if weight > 0:
+                score += weight * (max_conf / 100.0)
+
+        return min(100, round(score))
+
     def scanInstanceList(self) -> list:
         """List all previously run scans.
 

@@ -798,7 +798,7 @@
                                 if (typeName == null) {
                                     table += "<th class='sorter-false'>Data Element Type</th>";
                                 }
-                                table += "<th>Data Element</th><th>Source Data Element</th><th>Source Module</th><th>Identified</th></tr></thead><tbody>";
+                                table += "<th>Data Element</th><th>Source Data Element</th><th>Source Module</th><th class='text-center'>Confidence</th><th>Identified</th></tr></thead><tbody>";
                                 for (var i = 0; i < data.length; i++) {
                                     table += "<tr>";
                                     if (typeName == null) {
@@ -810,7 +810,11 @@
                                     table += "</pre></td><td><pre class='table-border-bg-inherit'>";
                                     table += sf.replace_sfurltag(data[i][2]);
                                     table += "</pre></td><td><pre class='table-border-bg-inherit'>" + data[i][3];
-                                    table += "</pre></td><td><pre class='table-border-bg-inherit'>" + data[i][0];
+                                    table += "</pre></td>";
+                                    var conf1 = data[i][4] || 0;
+                                    var confCls1 = conf1 >= 80 ? 'label-success' : conf1 >= 60 ? 'label-warning' : conf1 >= 40 ? 'label-default' : 'label-danger';
+                                    table += "<td class='text-center'><span class='label " + confCls1 + "'>" + conf1 + "%</span></td>";
+                                    table += "<td><pre class='table-border-bg-inherit'>" + data[i][0];
                                     table += "</pre></td>";
                                     table += "</tr>";
                                 }
@@ -1265,6 +1269,7 @@
                             table += "<th>Data Element</th></th>";
                             table += "<th>Source Data Element</th>";
                             table += "<th>Source Module</th>";
+                            table += "<th class='text-center'>Confidence</th>";
                             table += "<th>Identified</th>";
                             table += "</tr></thead><tbody>";
 
@@ -1284,7 +1289,11 @@
                                 table += "</pre></td><td><pre class='table-border-bg-inherit'>";
                                 table += sf.replace_sfurltag(data[i][2]);
                                 table += "</pre></td><td><pre class='table-border-bg-inherit'>" + data[i][3];
-                                table += "</pre></td><td><pre class='table-border-bg-inherit'>" + data[i][0];
+                                table += "</pre></td>";
+                                var conf2 = data[i][4] || 0;
+                                var confCls2 = conf2 >= 80 ? 'label-success' : conf2 >= 60 ? 'label-warning' : conf2 >= 40 ? 'label-default' : 'label-danger';
+                                table += "<td class='text-center'><span class='label " + confCls2 + "'>" + conf2 + "%</span></td>";
+                                table += "<td><pre class='table-border-bg-inherit'>" + data[i][0];
                                 table += "</pre></td>";
                                 table += "</tr>";
                             }

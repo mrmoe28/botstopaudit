@@ -322,9 +322,18 @@ class SpiderFootPlugin():
         """
 
         from spiderfoot import SpiderFootEvent
+        from spiderfoot.module_confidence import MODULE_CONFIDENCE
 
         if not isinstance(sfEvent, SpiderFootEvent):
             raise TypeError(f"sfEvent is {type(sfEvent)}; expected SpiderFootEvent")
+
+        # Apply module-level confidence if the event still has the default (100).
+        # Modules that explicitly set evt.confidence before calling notifyListeners
+        # keep their value; this only fills in the default.
+        if sfEvent.confidence == 100 and sfEvent.eventType != "ROOT":
+            module_conf = MODULE_CONFIDENCE.get(self.__name__, 100)
+            if module_conf != 100:
+                sfEvent.confidence = module_conf
 
         eventName = sfEvent.eventType
         eventData = sfEvent.data
