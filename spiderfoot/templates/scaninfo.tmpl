@@ -1498,7 +1498,6 @@
 
         // ── Plain-English Report tab ─────────────────────────────────────────
         var reportRisk = {
-            // High
             'VULNERABILITY_CVE_CRITICAL':'high','VULNERABILITY_CVE_HIGH':'high',
             'PASSWORD_COMPROMISED':'high','DEFACED_INTERNET_NAME':'high','DEFACED_IPADDR':'high',
             'CLOUD_STORAGE_BUCKET_OPEN':'high','AFFILIATE_INTERNET_NAME_HIJACKABLE':'high',
@@ -1506,7 +1505,6 @@
             'EMAILADDR_COMPROMISED':'high','HASH_COMPROMISED':'high','CREDIT_CARD_NUMBER':'high',
             'DARKNET_MENTION_URL':'high','DARKNET_MENTION_CONTENT':'high',
             'MALICIOUS_IPADDR':'high','MALICIOUS_INTERNET_NAME':'high',
-            // Medium
             'VULNERABILITY_CVE_MEDIUM':'medium','VULNERABILITY_GENERAL':'medium',
             'TCP_PORT_OPEN':'medium','UDP_PORT_OPEN':'medium',
             'SSL_CERTIFICATE_EXPIRED':'medium','SSL_CERTIFICATE_MISMATCH':'medium','SSL_CERTIFICATE_EXPIRING':'medium',
@@ -1515,7 +1513,6 @@
             'BLACKLISTED_COHOST':'medium','BLACKLISTED_AFFILIATE_INTERNET_NAME':'medium',
             'BLACKLISTED_AFFILIATE_IPADDR':'medium','BLACKLISTED_SUBNET':'medium','BLACKLISTED_NETBLOCK':'medium',
             'SIMILARDOMAIN':'medium','PUBLIC_CODE_REPO':'medium',
-            // Low
             'CO_HOSTED_SITE':'low','CO_HOSTED_SITE_DOMAIN':'low',
             'EMAILADDR':'low','EMAILADDR_GENERIC':'low','EMAILADDR_DELIVERABLE':'low',
             'CLOUD_STORAGE_BUCKET':'low','DOMAIN_WHOIS':'low','AFFILIATE_DOMAIN_WHOIS':'low',
@@ -1529,6 +1526,67 @@
                          'medium':'<span class="label label-warning">MEDIUM</span>',
                          'low':'<span class="label label-info">LOW</span>',
                          'info':'<span class="label label-default">INFO</span>'};
+
+        // Maps event type → how to pull real data into the fix prompt.
+        // ph: the placeholder substring to replace; fmt: function(uniqueItems) → replacement string
+        var fixDataConfig = {
+            'TCP_PORT_OPEN':    { ph:'[e.g., 3306 MySQL, 6379 Redis, 8080 admin panel]',
+                fmt: function(d){ return d.slice(0,8).map(function(r){return r[0];}).join(', '); } },
+            'UDP_PORT_OPEN':    { ph:'[list from scan]',
+                fmt: function(d){ return d.slice(0,8).map(function(r){return r[0];}).join(', '); } },
+            'DNS_SPF':          { ph:'[paste the TXT record]',
+                fmt: function(d){ return d.length ? d[0][0] : '[not found]'; } },
+            'SSL_CERTIFICATE_EXPIRED':  { ph:'[your domain]',
+                fmt: function(d){ return d.length ? d[0][0] : '[domain]'; } },
+            'SSL_CERTIFICATE_MISMATCH': { ph:'[your domain or subdomain]',
+                fmt: function(d){ return d.length ? d[0][0] : '[hostname]'; } },
+            'SSL_CERTIFICATE_EXPIRING': { ph:'[your domain]',
+                fmt: function(d){ return d.length ? d[0][0] : '[domain]'; } },
+            'INTERESTING_FILE': { ph:'[paste the exact URL from the scan]',
+                fmt: function(d){ return d.slice(0,5).map(function(r){return r[0];}).join('\n'); } },
+            'ERROR_MESSAGE':    { ph:'[paste here]',
+                fmt: function(d){ return d.length ? d[0][0].substring(0,300) : '[not found]'; } },
+            'INTERNAL_IP_ADDRESS': { ph:'[list from scan]',
+                fmt: function(d){ return d.slice(0,5).map(function(r){return r[0];}).join(', '); } },
+            'WEBSERVER_BANNER': { ph:'[paste the exact banner, e.g., Apache/2.4.51 or nginx/1.14.0]',
+                fmt: function(d){ return d.length ? d[0][0] : '[banner]'; } },
+            'EMAILADDR_COMPROMISED': { ph:'[list from scan]',
+                fmt: function(d){ return d.slice(0,5).map(function(r){return r[0];}).join(', '); } },
+            'CLOUD_STORAGE_BUCKET_OPEN': { ph:'[paste the bucket URL or name]',
+                fmt: function(d){ return d.length ? d[0][0] : '[bucket URL]'; } },
+            'CLOUD_STORAGE_BUCKET':      { ph:'[paste from scan]',
+                fmt: function(d){ return d.length ? d[0][0] : '[bucket]'; } },
+            'PUBLIC_CODE_REPO': { ph:'[paste the repo URL]',
+                fmt: function(d){ return d.length ? d[0][0] : '[repo URL]'; } },
+            'URL_UPLOAD':       { ph:'[paste the URL]',
+                fmt: function(d){ return d.length ? d[0][0] : '[URL]'; } },
+            'SIMILARDOMAIN':    { ph:'[list from scan]',
+                fmt: function(d){ return d.slice(0,5).map(function(r){return r[0];}).join(', '); } },
+            'AFFILIATE_INTERNET_NAME_HIJACKABLE': { ph:'[from scan]',
+                fmt: function(d){ return d.length ? d[0][0] : '[domain]'; } },
+            'DEFACED_INTERNET_NAME': { ph:'[from scan]',
+                fmt: function(d){ return d.length ? d[0][0] : '[site]'; } }
+        };
+
+        function copyFixPrompt(btn) {
+            var pre = btn.previousElementSibling;
+            var text = pre.textContent;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(function(){
+                    btn.textContent = 'Copied!';
+                    setTimeout(function(){ btn.textContent = 'Copy'; }, 1500);
+                });
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                btn.textContent = 'Copied!';
+                setTimeout(function(){ btn.textContent = 'Copy'; }, 1500);
+            }
+        }
 
         function viewReport(instanceId) {
             $("#scansummary-content").remove();
@@ -1551,7 +1609,6 @@
                     return;
                 }
 
-                // Bucket into risk groups
                 var groups = {high:[], medium:[], low:[], info:[]};
                 for (var i = 0; i < data.length; i++) {
                     var typeId   = data[i][0];
@@ -1572,6 +1629,8 @@
                                 low:'<span style="color:#2980b9">Low / Informational</span>',
                                 info:'<span style="color:#7f8c8d">Background Info</span>'};
 
+                var needsData = []; // items we need to fetch real data for
+
                 for (var r = 0; r < order.length; r++) {
                     var risk = order[r];
                     if (groups[risk].length === 0) continue;
@@ -1581,6 +1640,7 @@
                         var item = groups[risk][j];
                         var desc = eventTypeHelp[item.typeId] || 'Data collected during the scan.';
                         var fix  = eventTypeFix[item.typeId] || null;
+                        var preId = 'fix-pre-' + item.typeId;
                         html += "<div class='list-group-item' style='margin-bottom:10px'>";
                         html += "<div style='display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px'>";
                         html += "<h5 style='margin:0;flex:1'>";
@@ -1594,9 +1654,12 @@
                             html += "<div style='margin-top:8px'>";
                             html += "<strong style='font-size:12px'>Claude Code Fix Prompt:</strong>";
                             html += "<div style='position:relative;margin-top:4px'>";
-                            html += "<pre style='font-size:11px;background:#f8f8f8;border:1px solid #ddd;padding:8px;white-space:pre-wrap;word-break:break-word;max-height:120px;overflow:auto'>" + fix + "</pre>";
-                            html += "<button class='btn btn-xs btn-default' style='position:absolute;top:4px;right:4px' onclick='var p=this.previousElementSibling;var r=document.createRange();r.selectNode(p);window.getSelection().removeAllRanges();window.getSelection().addRange(r);document.execCommand(\"copy\");this.textContent=\"Copied!\";var b=this;setTimeout(function(){b.textContent=\"Copy\"},1500)'>Copy</button>";
+                            html += "<pre id='" + preId + "' style='font-size:11px;background:#f8f8f8;border:1px solid #ddd;padding:8px;white-space:pre-wrap;word-break:break-word;max-height:140px;overflow:auto'>" + fix + "</pre>";
+                            html += "<button class='btn btn-xs btn-default' style='position:absolute;top:4px;right:4px' onclick='copyFixPrompt(this)'>Copy</button>";
                             html += "</div></div>";
+                            if (fixDataConfig[item.typeId]) {
+                                needsData.push({typeId: item.typeId, preId: preId, cfg: fixDataConfig[item.typeId]});
+                            }
                         }
                         html += "</div>";
                     }
@@ -1606,6 +1669,19 @@
 
                 $("#scansummary-content").replaceWith(html);
                 $("#loader").fadeOut(500);
+
+                // Now fetch real scan data for each type and substitute into the prompts
+                for (var k = 0; k < needsData.length; k++) {
+                    (function(entry) {
+                        sf.fetchData('${docroot}/scaneventresultsunique', {'id': instanceId, 'eventType': entry.typeId, 'filterfp': null}, function(rows) {
+                            if (!rows || rows.length === 0) return;
+                            var preEl = document.getElementById(entry.preId);
+                            if (!preEl) return;
+                            var realValue = entry.cfg.fmt(rows);
+                            preEl.textContent = preEl.textContent.replace(entry.cfg.ph, realValue);
+                        });
+                    })(needsData[k]);
+                }
             });
         }
         // ── End Report tab ───────────────────────────────────────────────────
