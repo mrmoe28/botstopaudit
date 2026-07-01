@@ -323,3 +323,342 @@ body {
     display: inline-block;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   BotStop Modern UI  ·  Gemini-inspired theme
+   ═══════════════════════════════════════════════════════ */
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+/* ── Navbar ─────────────────────────────────────────── */
+.navbar.navbar-default {
+  background: #0f172a;
+  border: none;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  min-height: 56px;
+}
+.navbar-default .navbar-header .navbar-brand {
+  padding-top: 10px;
+}
+.navbar-default .navbar-nav > li > a {
+  color: #cbd5e1 !important;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 18px 16px;
+  border-bottom: 3px solid transparent;
+  transition: color 0.12s, background 0.12s;
+}
+.navbar-default .navbar-nav > li > a:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,0.06) !important;
+}
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+  color: #38bdf8 !important;
+  background: rgba(56,189,248,0.08) !important;
+  border-bottom: 3px solid #059CD7;
+}
+.navbar-default .navbar-nav.navbar-right > li > a {
+  color: #94a3b8 !important;
+  font-size: 13px;
+  padding: 18px 14px;
+}
+.navbar-default .navbar-nav.navbar-right > li > a:hover {
+  color: #e2e8f0 !important;
+  background: rgba(255,255,255,0.06) !important;
+}
+#toggler-text {
+  color: #94a3b8;
+  font-size: 12px;
+  padding-left: 12px;
+}
+
+/* ── Layout ─────────────────────────────────────────── */
+#mainbody {
+  padding: 32px 48px 80px !important;
+}
+
+/* ── Page headings ───────────────────────────────────── */
+#mainbody > h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 0;
+  margin-bottom: 28px;
+  letter-spacing: -0.3px;
+}
+
+/* ── Panels / Cards ──────────────────────────────────── */
+.panel {
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04) !important;
+  background: #fff;
+  overflow: hidden;
+}
+.panel-heading {
+  border-radius: 12px 12px 0 0 !important;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 14px 18px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+.panel-primary > .panel-heading {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%) !important;
+  border-color: #0f172a !important;
+  color: #fff !important;
+}
+.panel-body {
+  padding: 18px !important;
+}
+
+/* ── Tables ──────────────────────────────────────────── */
+table.tablesorter {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+  margin-top: 0 !important;
+}
+.tablesorter-default th,
+.tablesorter-default thead td {
+  background: #f8fafc !important;
+  color: #64748b;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 12px 16px !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  border-top: none !important;
+  white-space: nowrap;
+}
+.tablesorter-default td {
+  padding: 11px 16px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  vertical-align: middle !important;
+  font-size: 13.5px;
+  color: #334155;
+}
+.tablesorter-default tbody tr:last-child td {
+  border-bottom: none !important;
+}
+.tablesorter-default tbody tr:hover td {
+  background: #f8fafc !important;
+}
+
+/* ── Tablesorter pager ───────────────────────────────── */
+.tablesorter-pager {
+  background: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  padding: 10px 16px !important;
+  font-size: 12.5px;
+  color: #64748b;
+  border-radius: 0 0 12px 12px !important;
+}
+.tablesorter-pager select {
+  border-radius: 4px !important;
+  font-size: 12px;
+  border: 1px solid #cbd5e1;
+  padding: 2px 4px;
+}
+
+/* ── Alerts ──────────────────────────────────────────── */
+.alert {
+  border-radius: 8px !important;
+  border: none !important;
+  border-left: 4px solid !important;
+  font-size: 13.5px;
+}
+.alert-success { background: #f0fdf4 !important; border-left-color: #22c55e !important; color: #166534 !important; }
+.alert-warning { background: #fffbeb !important; border-left-color: #f59e0b !important; color: #92400e !important; }
+.alert-danger  { background: #fef2f2 !important; border-left-color: #ef4444 !important; color: #991b1b !important; }
+.alert-info    { background: #f0f9ff !important; border-left-color: #059CD7 !important; color: #0c4a6e !important; }
+.alert h4 { font-weight: 700; margin-bottom: 4px; font-size: 14px; }
+
+/* ── Buttons ─────────────────────────────────────────── */
+.btn {
+  border-radius: 6px !important;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.1px;
+  transition: all 0.12s;
+}
+.btn-primary { background: #059CD7 !important; border-color: #048ab8 !important; color: #fff !important; }
+.btn-primary:hover { background: #048ab8 !important; }
+.btn-danger  { background: #ef4444 !important; border-color: #dc2626 !important; color: #fff !important; }
+.btn-danger:hover  { background: #dc2626 !important; }
+.btn-success { background: #22c55e !important; border-color: #16a34a !important; color: #fff !important; }
+.btn-success:hover { background: #16a34a !important; }
+.btn-default { background: #fff !important; border-color: #cbd5e1 !important; color: #475569 !important; }
+.btn-default:hover { background: #f8fafc !important; border-color: #94a3b8 !important; }
+
+/* ── Form controls ───────────────────────────────────── */
+.form-control {
+  border-radius: 6px !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: none !important;
+  font-size: 13.5px;
+  color: #1e293b;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-control:focus {
+  border-color: #059CD7 !important;
+  box-shadow: 0 0 0 3px rgba(5,156,215,0.15) !important;
+  outline: none;
+}
+
+/* ── Tabs (scan results) ─────────────────────────────── */
+.nav-tabs {
+  border-bottom: 2px solid #e2e8f0 !important;
+  margin-bottom: 20px;
+}
+.nav-tabs > li > a {
+  color: #64748b !important;
+  font-size: 13px;
+  font-weight: 500;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  padding: 10px 18px;
+  margin-bottom: -2px;
+  transition: color 0.12s;
+}
+.nav-tabs > li > a:hover {
+  color: #059CD7 !important;
+  background: transparent !important;
+  border-bottom-color: #059CD7 !important;
+}
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+  color: #059CD7 !important;
+  border-bottom: 2px solid #059CD7 !important;
+  background: transparent !important;
+  font-weight: 600;
+}
+
+/* ── Settings sidebar ────────────────────────────────── */
+.tabbable.tabs-left .nav-pills > li > a {
+  border-radius: 8px !important;
+  color: #475569;
+  font-size: 13px;
+  padding: 8px 14px;
+  transition: all 0.12s;
+}
+.tabbable.tabs-left .nav-pills > li.active > a,
+.tabbable.tabs-left .nav-pills > li.active > a:hover {
+  background: #059CD7 !important;
+  color: #fff !important;
+}
+.tabbable.tabs-left .nav-pills > li > a:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a;
+}
+
+/* ── New scan mode cards ──────────────────────────────── */
+.sf-mode-card {
+  border-radius: 12px !important;
+  background: #fff;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s !important;
+}
+.sf-mode-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(5,156,215,0.15) !important;
+  border-color: #059CD7 !important;
+}
+.sf-mode-card.sf-card-selected,
+.sf-mode-card.panel-primary {
+  background: #f0f9ff !important;
+  border-color: #059CD7 !important;
+  box-shadow: 0 2px 8px rgba(5,156,215,0.2) !important;
+}
+
+/* ── Status badges / labels ──────────────────────────── */
+.label {
+  border-radius: 5px !important;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  padding: 4px 8px !important;
+}
+.label-success { background: #22c55e !important; }
+.label-danger  { background: #ef4444 !important; }
+.label-warning { background: #f59e0b !important; }
+.label-info    { background: #059CD7 !important; }
+
+/* ── Dropdown menus ──────────────────────────────────── */
+.dropdown-menu {
+  border-radius: 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
+  padding: 6px !important;
+}
+.dropdown-menu > li > a {
+  border-radius: 6px !important;
+  font-size: 13px;
+  padding: 8px 12px !important;
+  color: #334155 !important;
+  transition: background 0.1s;
+}
+.dropdown-menu > li > a:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* ── Modals ──────────────────────────────────────────── */
+.modal-content {
+  border-radius: 14px !important;
+  border: none !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important;
+  overflow: hidden;
+}
+.modal-header {
+  background: #0f172a;
+  border-bottom: none !important;
+  padding: 20px 24px !important;
+}
+.modal-title { color: #fff !important; font-weight: 600; font-size: 1.05rem; }
+.modal-body {
+  padding: 24px !important;
+  font-size: 13.5px;
+  color: #334155;
+  line-height: 1.65;
+}
+.modal-footer {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0 !important;
+  padding: 16px 24px !important;
+}
+
+/* ── Footer tip bar ──────────────────────────────────── */
+.footer {
+  background: #0f172a !important;
+  color: #64748b !important;
+  font-size: 12.5px;
+  padding: 12px 48px !important;
+}
+.footer a { color: #059CD7 !important; }
+
+/* ── Misc ────────────────────────────────────────────── */
+hr { border-color: #e2e8f0; }
+.breadcrumb {
+  background: #f8fafc !important;
+  border-radius: 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  font-size: 13px;
+}
+code {
+  background: #f1f5f9;
+  color: #e74c3c;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 12.5px;
+}
