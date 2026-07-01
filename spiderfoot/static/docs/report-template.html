@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BotStop Security — Exposure Report</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; color: #1e293b; background: #f1f5f9; padding: 32px 24px; line-height: 1.6; }
+  .page { max-width: 820px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+
+  /* Cover */
+  .cover { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); padding: 56px 48px 48px; }
+  .cover-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 48px; }
+  .cover-icon { width: 44px; height: 44px; background: rgba(5,156,215,0.2); border: 1px solid rgba(5,156,215,0.4); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .cover-brand-text .name { color: #fff; font-size: 17px; font-weight: 700; }
+  .cover-brand-text .sub { color: #64748b; font-size: 12px; }
+  .cover-badge { display: inline-block; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 4px 10px; border-radius: 4px; margin-bottom: 16px; }
+  .cover h1 { color: #fff; font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 8px; }
+  .cover .target { color: #38bdf8; font-size: 16px; font-weight: 600; margin-bottom: 32px; }
+  .cover-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px; }
+  .cover-meta-item .label { color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+  .cover-meta-item .value { color: #e2e8f0; font-size: 14px; font-weight: 600; }
+
+  /* Content */
+  .content { padding: 40px 48px; }
+  .section { margin-bottom: 36px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #059CD7; margin-bottom: 16px; padding-bottom: 6px; border-bottom: 2px solid #f1f5f9; }
+
+  /* Severity summary cards */
+  .sev-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 8px; }
+  .sev-card { border-radius: 8px; padding: 14px 12px; text-align: center; border: 1px solid; }
+  .sev-card .count { font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .sev-card .name { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .sev-critical { background: #fef2f2; border-color: #fca5a5; }
+  .sev-critical .count, .sev-critical .name { color: #991b1b; }
+  .sev-high { background: #fff7ed; border-color: #fdba74; }
+  .sev-high .count, .sev-high .name { color: #9a3412; }
+  .sev-medium { background: #fffbeb; border-color: #fcd34d; }
+  .sev-medium .count, .sev-medium .name { color: #92400e; }
+  .sev-low { background: #f0fdf4; border-color: #86efac; }
+  .sev-low .count, .sev-low .name { color: #166534; }
+  .sev-info { background: #f0f9ff; border-color: #7dd3fc; }
+  .sev-info .count, .sev-info .name { color: #0c4a6e; }
+
+  /* Executive summary box */
+  .exec-box { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #059CD7; border-radius: 0 8px 8px 0; padding: 18px 20px; }
+  .exec-box p { color: #475569; font-size: 13px; line-height: 1.7; margin-bottom: 8px; }
+  .exec-box p:last-child { margin-bottom: 0; }
+  .exec-box strong { color: #0f172a; }
+
+  /* Before/After */
+  .ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .ba-box { border-radius: 8px; padding: 16px 18px; }
+  .ba-before { background: #fef2f2; border: 1px solid #fca5a5; }
+  .ba-after  { background: #f0fdf4; border: 1px solid #86efac; }
+  .ba-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+  .ba-before .ba-title { color: #991b1b; }
+  .ba-after  .ba-title { color: #166534; }
+  .ba-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; font-size: 12.5px; }
+  .ba-before .ba-item { color: #7f1d1d; }
+  .ba-after  .ba-item { color: #14532d; }
+  .ba-item span { flex-shrink: 0; font-weight: 700; }
+
+  /* Finding cards */
+  .finding { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .finding-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+  .finding-sev { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 4px; flex-shrink: 0; }
+  .finding-sev.critical { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+  .finding-sev.high     { background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; }
+  .finding-sev.medium   { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+  .finding-sev.low      { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+  .finding-sev.info     { background: #f0f9ff; color: #0c4a6e; border: 1px solid #7dd3fc; }
+  .finding-title { font-weight: 700; font-size: 13.5px; color: #0f172a; }
+  .finding-category { margin-left: auto; font-size: 11px; color: #94a3b8; }
+  .finding-body { padding: 14px 16px; }
+  .finding-row { display: grid; grid-template-columns: 120px 1fr; gap: 8px; margin-bottom: 8px; font-size: 12.5px; }
+  .finding-row .row-label { color: #64748b; font-weight: 600; }
+  .finding-row .row-value { color: #334155; }
+  .finding-row .row-value.evidence { font-family: 'Courier New', monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11.5px; word-break: break-all; }
+  .finding-fix { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px 14px; margin-top: 10px; }
+  .finding-fix .fix-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #0369a1; margin-bottom: 4px; }
+  .finding-fix p { font-size: 12.5px; color: #0c4a6e; line-height: 1.6; }
+
+  /* Recommendations summary */
+  .rec-item { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f1f5f9; align-items: flex-start; }
+  .rec-item:last-child { border-bottom: none; }
+  .rec-num { flex-shrink: 0; width: 26px; height: 26px; background: #059CD7; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-top: 1px; }
+  .rec-text { font-size: 13px; color: #334155; line-height: 1.5; }
+  .rec-text strong { color: #0f172a; display: block; margin-bottom: 2px; }
+
+  /* Disclaimer */
+  .disclaimer { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 18px; }
+  .disclaimer p { font-size: 11.5px; color: #64748b; line-height: 1.65; margin-bottom: 6px; }
+  .disclaimer p:last-child { margin-bottom: 0; }
+
+  /* Footer */
+  .report-footer { background: #0f172a; padding: 16px 48px; display: flex; justify-content: space-between; align-items: center; }
+  .report-footer .left { color: #64748b; font-size: 11px; }
+  .report-footer .left strong { color: #94a3b8; }
+  .report-footer .right { color: #475569; font-size: 11px; text-align: right; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; border-radius: 0; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .report-footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .sev-card, .ba-box, .finding-fix, .exec-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .finding { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="cover-brand">
+      <div class="cover-icon">🛡️</div>
+      <div class="cover-brand-text">
+        <div class="name">BotStop Security</div>
+        <div class="sub">OSINT Exposure Intelligence</div>
+      </div>
+    </div>
+    <div class="cover-badge">Confidential — Authorized Recipients Only</div>
+    <h1>Security Exposure Report</h1>
+    <div class="target"><!-- CLIENT DOMAIN --> example.com</div>
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <div class="label">Prepared For</div>
+        <div class="value"><!-- CLIENT NAME --> Acme Corp</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Report Date</div>
+        <div class="value"><!-- DATE --> July 1, 2026</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Scan Type</div>
+        <div class="value"><!-- SCAN TYPE --> Full Exposure</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Severity Summary -->
+    <div class="section">
+      <div class="section-title">Findings Summary</div>
+      <div class="sev-grid">
+        <div class="sev-card sev-critical"><div class="count"><!-- # -->0</div><div class="name">Critical</div></div>
+        <div class="sev-card sev-high">    <div class="count"><!-- # -->3</div><div class="name">High</div></div>
+        <div class="sev-card sev-medium">  <div class="count"><!-- # -->5</div><div class="name">Medium</div></div>
+        <div class="sev-card sev-low">     <div class="count"><!-- # -->4</div><div class="name">Low</div></div>
+        <div class="sev-card sev-info">    <div class="count"><!-- # -->11</div><div class="name">Info</div></div>
+      </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section">
+      <div class="section-title">Executive Summary</div>
+      <div class="exec-box">
+        <p><!-- EDIT THIS PARAGRAPH -->
+          BotStop conducted an OSINT exposure scan of <strong>example.com</strong> on July 1, 2026. The scan analyzed publicly available information across DNS records, web infrastructure, breach databases, threat intelligence feeds, and indexed public sources.
+        </p>
+        <p>
+          <!-- EDIT: Summarize the 2-3 most important findings in plain English. -->
+          We identified <strong>3 high-severity issues</strong> requiring prompt attention: your domain is missing a DMARC record (anyone can spoof email from your domain), your server is disclosing its software version in HTTP headers, and one legacy subdomain is publicly accessible without authentication.
+        </p>
+        <p>
+          No critical findings were identified. The 5 medium-severity findings relate to email security configuration and indexing of employee email addresses. We recommend addressing all High findings within 30 days.
+        </p>
+      </div>
+    </div>
+
+    <!-- Before / After -->
+    <div class="section">
+      <div class="section-title">Before &amp; After Overview</div>
+      <div class="ba-grid">
+        <div class="ba-box ba-before">
+          <div class="ba-title">⚠ Issues Found</div>
+          <!-- Add one line per HIGH/CRITICAL finding -->
+          <div class="ba-item"><span>✗</span> No DMARC record — email spoofing risk</div>
+          <div class="ba-item"><span>✗</span> Server version disclosed in headers</div>
+          <div class="ba-item"><span>✗</span> staging.example.com exposed publicly</div>
+          <div class="ba-item"><span>✗</span> 12 employee emails publicly indexed</div>
+          <div class="ba-item"><span>✗</span> SPF record too permissive</div>
+        </div>
+        <div class="ba-box ba-after">
+          <div class="ba-title">✓ After Remediation</div>
+          <!-- Mirror each issue with its fix -->
+          <div class="ba-item"><span>✓</span> DMARC enforced, spoofing blocked</div>
+          <div class="ba-item"><span>✓</span> Server version hidden from responses</div>
+          <div class="ba-item"><span>✓</span> Staging environment access restricted</div>
+          <div class="ba-item"><span>✓</span> Email addresses removed from public index</div>
+          <div class="ba-item"><span>✓</span> SPF tightened to authorized senders only</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed Findings -->
+    <div class="section">
+      <div class="section-title">Detailed Findings</div>
+
+      <!-- FINDING 1 — duplicate this block per finding -->
+      <div class="finding">
+        <div class="finding-header">
+          <span class="finding-sev high">High</span>
+          <span class="finding-title">Missing DMARC Record</span>
+          <span class="finding-category">Email Security</span>
+        </div>
+        <div class="finding-body">
+          <div class="finding-row">
+            <span class="row-label">What we found</span>
+            <span class="row-value">No DMARC DNS record exists for example.com.</span>
+          </div>
+          <div class="finding-row">
+            <span class="row-label">Evidence</span>
+            <span class="row-value evidence">dig TXT _dmarc.example.com → NXDOMAIN</span>
+          </div>
+          <div class="finding-row">
+            <span class="row-label">Risk</span>
+            <span class="row-value">Attackers can send emails that appear to come from @example.com, enabling phishing attacks against your customers or partners.</span>
+          </div>
+          <div class="finding-fix">
+            <div class="fix-label">How to Fix</div>
+            <p>Add a DMARC TXT record to your DNS: <code>_dmarc.example.com IN TXT "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com"</code>. Start with <code>p=none</code> to monitor, then move to <code>p=quarantine</code> or <code>p=reject</code> once confirmed. Takes 5–10 minutes via your DNS provider.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- FINDING 2 -->
+      <div class="finding">
+        <div class="finding-header">
+          <span class="finding-sev high">High</span>
+          <span class="finding-title">Server Version Disclosed in HTTP Headers</span>
+          <span class="finding-category">Web Infrastructure</span>
+        </div>
+        <div class="finding-body">
+          <div class="finding-row">
+            <span class="row-label">What we found</span>
+            <span class="row-value">The web server returns its software name and version number in every HTTP response.</span>
+          </div>
+          <div class="finding-row">
+            <span class="row-label">Evidence</span>
+            <span class="row-value evidence">Server: Apache/2.4.51 (Ubuntu)</span>
+          </div>
+          <div class="finding-row">
+            <span class="row-label">Risk</span>
+            <span class="row-value">Attackers can instantly identify known vulnerabilities for this specific server version without any manual reconnaissance.</span>
+          </div>
+          <div class="finding-fix">
+            <div class="fix-label">How to Fix</div>
+            <p>For Apache: add <code>ServerTokens Prod</code> and <code>ServerSignature Off</code> to your Apache config. For Nginx: add <code>server_tokens off;</code> to the http block. For Cloudflare users: enable "Security Level" and hide server headers via Transform Rules.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- FINDING 3 -->
+      <div class="finding">
+        <div class="finding-header">
+          <span class="finding-sev high">High</span>
+          <span class="finding-title">Unauthenticated Staging Environment Exposed</span>
+          <span class="finding-category">Access Control</span>
+        </div>
+        <div class="finding-body">
+          <div class="finding-row">
+            <span class="row-label">What we found</span>
+            <span class="row-value">staging.example.com is publicly accessible with no authentication, returning a live application.</span>
+          </div>
+          <div class="finding-row">
+            <span class="row-label">Evidence</span>
+            <span class="row-value evidence">https://staging.example.com → HTTP 200, App version 2.1.0-dev</span>
+          </div>
+          <div class="finding-row">
+            <span class="row-label">Risk</span>
+            <span class="row-value">Dev environments often contain test credentials, debug interfaces, and unpatched code. Attackers commonly target staging environments to find vulnerabilities before production.</span>
+          </div>
+          <div class="finding-fix">
+            <div class="fix-label">How to Fix</div>
+            <p>Restrict staging.example.com to specific IP addresses (your office/VPN) using your hosting provider's firewall or Cloudflare Access. Alternatively, add HTTP Basic Auth as a minimum barrier. If the environment is no longer needed, remove the DNS record entirely.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADD MORE FINDINGS ABOVE THIS LINE -->
+      <p style="font-size:12px; color:#94a3b8; text-align:center; padding: 8px 0;">
+        <!-- Adjust text below to match actual finding counts -->
+        Showing top 3 of 23 total findings. Full findings list available in BotStop dashboard.
+      </p>
+    </div>
+
+    <!-- Priority Recommendations -->
+    <div class="section">
+      <div class="section-title">Priority Recommendations</div>
+      <div class="rec-item">
+        <div class="rec-num">1</div>
+        <div class="rec-text">
+          <strong>Add DMARC, review SPF (This week)</strong>
+          Protects your brand from email spoofing. Takes under 30 minutes. Your DNS provider has step-by-step guides — search "[your provider] add DMARC record."
+        </div>
+      </div>
+      <div class="rec-item">
+        <div class="rec-num">2</div>
+        <div class="rec-text">
+          <strong>Hide server version headers (This week)</strong>
+          One config line change on your web server or a Cloudflare Transform Rule if you use Cloudflare.
+        </div>
+      </div>
+      <div class="rec-item">
+        <div class="rec-num">3</div>
+        <div class="rec-text">
+          <strong>Restrict or remove staging environment (Within 30 days)</strong>
+          Put staging behind IP allowlist or Cloudflare Access. If unused, delete the DNS record.
+        </div>
+      </div>
+      <div class="rec-item">
+        <div class="rec-num">4</div>
+        <div class="rec-text">
+          <strong>Request removal of indexed employee emails (Within 30 days)</strong>
+          Submit removal requests via Google Search Console for any pages containing email addresses you don't want indexed.
+        </div>
+      </div>
+      <div class="rec-item">
+        <div class="rec-num">5</div>
+        <div class="rec-text">
+          <strong>Schedule a follow-up scan (In 30–60 days)</strong>
+          BotStop will re-scan after you've applied fixes to confirm all issues are resolved and check for any new exposures.
+        </div>
+      </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="section">
+      <div class="section-title">Important Disclaimer</div>
+      <div class="disclaimer">
+        <p>This report was produced using passive, non-intrusive OSINT (Open Source Intelligence) reconnaissance techniques. All findings reflect information that is <strong>already publicly accessible</strong> to any third party — no systems were accessed, exploited, or tested beyond what is available to the general public.</p>
+        <p>This report does not constitute a penetration test, vulnerability assessment, or legal compliance audit (SOC 2, HIPAA, PCI-DSS, GDPR, etc.). BotStop makes no warranty that this report identifies all security issues present in the client's environment. Clients should engage a qualified penetration testing firm for full security assessment.</p>
+        <p>This report is confidential and prepared solely for the authorized recipient named on the cover. Unauthorized disclosure is prohibited. BotStop will retain scan data for 90 days from the report date unless the client requests earlier deletion.</p>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <div class="report-footer">
+    <div class="left"><strong>BotStop Security</strong> · Confidential · Authorized Recipients Only</div>
+    <div class="right">Report Date: <!-- DATE --> July 1, 2026 · <!-- DOMAIN --> example.com</div>
+  </div>
+
+</div>
+</body>
+</html>
