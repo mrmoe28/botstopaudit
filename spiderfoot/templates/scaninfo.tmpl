@@ -163,6 +163,7 @@
       <a id='btn-graph' class="btn btn-default" onClick='graphEvents("${id}")'><i class='glyphicon glyphicon-asterisk'></i>&nbsp;Graph</a>
       <a id='btn-info' class="btn btn-default" onClick='viewScanConfig("${id}")'><i class='glyphicon glyphicon-cog'></i>&nbsp;Scan Settings</a>
       <a id='btn-log' class="btn btn-default" onClick='viewScanLog("${id}")'><i class='glyphicon glyphicon-book'></i>&nbsp;Log</a>
+      <a id='btn-report' class="btn btn-primary" onClick='viewReport("${id}")'><i class='glyphicon glyphicon-list-alt'></i>&nbsp;Report</a>
     </div>
     <div class='btn-group pull-right'>
         <div id='btn-search' class='input-group pull-right'>
@@ -736,9 +737,9 @@
         }
 
         function navTo(target) {
-            var targets = [ "btn-browse", "btn-info", "btn-log", 
+            var targets = [ "btn-browse", "btn-info", "btn-log",
                 "btn-export", "btn-download-logs", "btn-viz",
-                "btn-status", "btn-graph", "btn-correlations" ]
+                "btn-status", "btn-graph", "btn-correlations", "btn-report" ]
             for (var i = 0; i < targets.length; i++) {
                 if (targets[i] == target) {
                     $("#" + targets[i]).addClass("active");
@@ -1494,6 +1495,120 @@
                 $("#mainbody").append(table);
             });
         }
+
+        // ── Plain-English Report tab ─────────────────────────────────────────
+        var reportRisk = {
+            // High
+            'VULNERABILITY_CVE_CRITICAL':'high','VULNERABILITY_CVE_HIGH':'high',
+            'PASSWORD_COMPROMISED':'high','DEFACED_INTERNET_NAME':'high','DEFACED_IPADDR':'high',
+            'CLOUD_STORAGE_BUCKET_OPEN':'high','AFFILIATE_INTERNET_NAME_HIJACKABLE':'high',
+            'BLACKLISTED_IPADDR':'high','BLACKLISTED_INTERNET_NAME':'high',
+            'EMAILADDR_COMPROMISED':'high','HASH_COMPROMISED':'high','CREDIT_CARD_NUMBER':'high',
+            'DARKNET_MENTION_URL':'high','DARKNET_MENTION_CONTENT':'high',
+            'MALICIOUS_IPADDR':'high','MALICIOUS_INTERNET_NAME':'high',
+            // Medium
+            'VULNERABILITY_CVE_MEDIUM':'medium','VULNERABILITY_GENERAL':'medium',
+            'TCP_PORT_OPEN':'medium','UDP_PORT_OPEN':'medium',
+            'SSL_CERTIFICATE_EXPIRED':'medium','SSL_CERTIFICATE_MISMATCH':'medium','SSL_CERTIFICATE_EXPIRING':'medium',
+            'INTERESTING_FILE':'medium','ERROR_MESSAGE':'medium','INTERNAL_IP_ADDRESS':'medium',
+            'WEBSERVER_BANNER':'medium','URL_UPLOAD':'medium','DNS_SPF':'medium',
+            'BLACKLISTED_COHOST':'medium','BLACKLISTED_AFFILIATE_INTERNET_NAME':'medium',
+            'BLACKLISTED_AFFILIATE_IPADDR':'medium','BLACKLISTED_SUBNET':'medium','BLACKLISTED_NETBLOCK':'medium',
+            'SIMILARDOMAIN':'medium','PUBLIC_CODE_REPO':'medium',
+            // Low
+            'CO_HOSTED_SITE':'low','CO_HOSTED_SITE_DOMAIN':'low',
+            'EMAILADDR':'low','EMAILADDR_GENERIC':'low','EMAILADDR_DELIVERABLE':'low',
+            'CLOUD_STORAGE_BUCKET':'low','DOMAIN_WHOIS':'low','AFFILIATE_DOMAIN_WHOIS':'low',
+            'WEBSERVER_HTTPHEADERS':'low','HTTP_CODE':'low','DEVICE_TYPE':'low',
+            'PHONE_NUMBER':'low','SOCIAL_MEDIA':'low','USERNAME':'low',
+            'AFFILIATE_INTERNET_NAME':'low','AFFILIATE_IPADDR':'low',
+            'LINKEDIN_NAME':'low','BITCOIN_ADDRESS':'low','ETHEREUM_ADDRESS':'low'
+        };
+
+        var riskLabel = {'high':'<span class="label label-danger">HIGH RISK</span>',
+                         'medium':'<span class="label label-warning">MEDIUM</span>',
+                         'low':'<span class="label label-info">LOW</span>',
+                         'info':'<span class="label label-default">INFO</span>'};
+
+        function viewReport(instanceId) {
+            $("#scansummary-content").remove();
+            $("#scanlogs-content").remove();
+            $("#loader").show();
+            $("#btn-export").hide();
+            $("#btn-download-logs").hide();
+            $("#btn-refresh").show();
+            $("#btn-search").hide();
+            $("#scanreminder").hide();
+            navTo("btn-report");
+            refresh = function() { viewReport(instanceId); };
+
+            $("#mainbody").append("<div id='scansummary-content'><p class='text-muted'>Building report…</p></div>");
+
+            sf.fetchData('${docroot}/scansummary', {'id': instanceId, 'by': 'type'}, function(data) {
+                if (!data || data.length === 0) {
+                    $("#scansummary-content").html("<div class='alert alert-warning'><h4>No findings yet.</h4>The scan may still be running — refresh in a moment.</div>");
+                    $("#loader").fadeOut(500);
+                    return;
+                }
+
+                // Bucket into risk groups
+                var groups = {high:[], medium:[], low:[], info:[]};
+                for (var i = 0; i < data.length; i++) {
+                    var typeId   = data[i][0];
+                    var typeName = data[i][1];
+                    var total    = data[i][3];
+                    var unique   = data[i][4];
+                    var risk     = reportRisk[typeId] || 'info';
+                    groups[risk].push({typeId:typeId, typeName:typeName, total:total, unique:unique});
+                }
+
+                var html = "<div id='scansummary-content'>";
+                html += "<h3 style='margin-top:0'>Plain-English Report</h3>";
+                html += "<p class='text-muted'>Every finding is explained below in plain language, sorted by risk. Click a category name to browse the raw data.</p>";
+
+                var order = ['high','medium','low','info'];
+                var headings = {high:'<span style="color:#c0392b">High Risk — Act Now</span>',
+                                medium:'<span style="color:#e67e22">Medium Risk — Review Soon</span>',
+                                low:'<span style="color:#2980b9">Low / Informational</span>',
+                                info:'<span style="color:#7f8c8d">Background Info</span>'};
+
+                for (var r = 0; r < order.length; r++) {
+                    var risk = order[r];
+                    if (groups[risk].length === 0) continue;
+                    html += "<h4 style='border-bottom:2px solid #eee;padding-bottom:6px;margin-top:28px'>" + headings[risk] + "</h4>";
+                    html += "<div class='list-group'>";
+                    for (var j = 0; j < groups[risk].length; j++) {
+                        var item = groups[risk][j];
+                        var desc = eventTypeHelp[item.typeId] || 'Data collected during the scan.';
+                        var fix  = eventTypeFix[item.typeId] || null;
+                        html += "<div class='list-group-item' style='margin-bottom:10px'>";
+                        html += "<div style='display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px'>";
+                        html += "<h5 style='margin:0;flex:1'>";
+                        html += "<a class='link' onClick='browseEventData(\"" + instanceId + "\",\"" + item.typeName.replace(/"/g,'&quot;') + "\",\"" + item.typeId + "\",\"full\")'>" + item.typeName + "</a>";
+                        html += "&nbsp;" + riskLabel[risk];
+                        html += "</h5>";
+                        html += "<span class='text-muted' style='font-size:12px;white-space:nowrap'>" + item.unique + " unique / " + item.total + " total</span>";
+                        html += "</div>";
+                        html += "<p style='margin:8px 0 4px 0;color:#444'>" + desc + "</p>";
+                        if (fix) {
+                            html += "<div style='margin-top:8px'>";
+                            html += "<strong style='font-size:12px'>Claude Code Fix Prompt:</strong>";
+                            html += "<div style='position:relative;margin-top:4px'>";
+                            html += "<pre style='font-size:11px;background:#f8f8f8;border:1px solid #ddd;padding:8px;white-space:pre-wrap;word-break:break-word;max-height:120px;overflow:auto'>" + fix + "</pre>";
+                            html += "<button class='btn btn-xs btn-default' style='position:absolute;top:4px;right:4px' onclick='var p=this.previousElementSibling;var r=document.createRange();r.selectNode(p);window.getSelection().removeAllRanges();window.getSelection().addRange(r);document.execCommand(\"copy\");this.textContent=\"Copied!\";var b=this;setTimeout(function(){b.textContent=\"Copy\"},1500)'>Copy</button>";
+                            html += "</div></div>";
+                        }
+                        html += "</div>";
+                    }
+                    html += "</div>";
+                }
+                html += "</div>";
+
+                $("#scansummary-content").replaceWith(html);
+                $("#loader").fadeOut(500);
+            });
+        }
+        // ── End Report tab ───────────────────────────────────────────────────
 
         if ("${status}" == "CREATED" || "${status}" == "RUNNING" || "${status}" == "STARTING" || "${status}" == "STARTED" || "${status}" == "UNKNOWN" || "${status}" == "INITIALIZING") {
             scanSummaryView("${id}");
