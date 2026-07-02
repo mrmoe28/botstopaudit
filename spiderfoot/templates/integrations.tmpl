@@ -1,0 +1,88 @@
+<%include file="HEADER.tmpl"/>
+<div class="container" style="max-width:860px;margin:40px auto;padding:0 16px;">
+  <h2 style="margin-bottom:8px;">Integrations</h2>
+  <p style="color:#888;margin-bottom:28px;">Connect external data sources to enrich your security scans. API keys are stored securely in your settings.</p>
+
+  <div class="row">
+
+    <div class="col-sm-6" style="margin-bottom:20px;">
+      <div class="panel panel-default" style="height:100%;">
+        <div class="panel-body">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <span class="glyphicon glyphicon-eye-open" style="font-size:24px;color:#059CD7;"></span>
+            <strong style="font-size:1.05rem;">Shodan</strong>
+          </div>
+          <p style="color:#888;font-size:0.9rem;margin-bottom:16px;">Search engine for internet-connected devices. Discovers open ports, services, and vulnerabilities.</p>
+          <a href="${docroot}/opts#sfp_shodan" class="btn btn-default btn-sm">Configure</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6" style="margin-bottom:20px;">
+      <div class="panel panel-default" style="height:100%;">
+        <div class="panel-body">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <span class="glyphicon glyphicon-shield" style="font-size:24px;color:#059CD7;"></span>
+            <strong style="font-size:1.05rem;">VirusTotal</strong>
+          </div>
+          <p style="color:#888;font-size:0.9rem;margin-bottom:16px;">Scan URLs, domains, IPs, and files for malware and malicious activity across 70+ antivirus engines.</p>
+          <a href="${docroot}/opts#sfp_virustotal" class="btn btn-default btn-sm">Configure</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6" style="margin-bottom:20px;">
+      <div class="panel panel-default" style="height:100%;">
+        <div class="panel-body">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <span class="glyphicon glyphicon-envelope" style="font-size:24px;color:#059CD7;"></span>
+            <strong style="font-size:1.05rem;">HaveIBeenPwned</strong>
+          </div>
+          <p style="color:#888;font-size:0.9rem;margin-bottom:16px;">Check if email addresses associated with your domain appear in known data breaches.</p>
+          <a href="${docroot}/opts#sfp_haveibeenpwned" class="btn btn-default btn-sm">Configure</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6" style="margin-bottom:20px;">
+      <div class="panel panel-default" style="height:100%;">
+        <div class="panel-body">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <span class="glyphicon glyphicon-search" style="font-size:24px;color:#059CD7;"></span>
+            <strong style="font-size:1.05rem;">Hunter.io</strong>
+          </div>
+          <p style="color:#888;font-size:0.9rem;margin-bottom:16px;">Find and verify professional email addresses associated with any domain.</p>
+          <a href="${docroot}/opts#sfp_hunter" class="btn btn-default btn-sm">Configure</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6" style="margin-bottom:20px;">
+      <div class="panel panel-default" style="height:100%;">
+        <div class="panel-body">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <span class="glyphicon glyphicon-globe" style="font-size:24px;color:#059CD7;"></span>
+            <strong style="font-size:1.05rem;">SecurityTrails</strong>
+          </div>
+          <p style="color:#888;font-size:0.9rem;margin-bottom:16px;">Historical DNS and WHOIS data, subdomain discovery, and IP intelligence.</p>
+          <a href="${docroot}/opts#sfp_securitytrails" class="btn btn-default btn-sm">Configure</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6" style="margin-bottom:20px;">
+      <div class="panel panel-default" style="height:100%;">
+        <div class="panel-body">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <span class="glyphicon glyphicon-wrench" style="font-size:24px;color:#888;"></span>
+            <strong style="font-size:1.05rem;">All Integrations</strong>
+          </div>
+          <p style="color:#888;font-size:0.9rem;margin-bottom:16px;">BotStop supports 200+ data sources. Configure API keys for Censys, IntelX, Spyse, and more in Settings.</p>
+          <a href="${docroot}/opts" class="btn btn-primary btn-sm">Open Settings</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<%include file="FOOTER.tmpl"/>

@@ -1061,6 +1061,23 @@ class SpiderFootWebUi:
     # ── End auth routes ───────────────────────────────────────────────────────
 
     @cherrypy.expose
+    def profile(self: 'SpiderFootWebUi') -> str:
+        """User profile page."""
+        user = cherrypy.session.get('user', {})
+        db_user = self.__db.userGetById(user.get('id', '')) or {}
+        templ = Template(filename='spiderfoot/templates/profile.tmpl', lookup=self.lookup)
+        return templ.render(pageid='PROFILE', docroot=self.docroot, version=__version__,
+                            user=user, db_user=db_user)
+
+    @cherrypy.expose
+    def integrations(self: 'SpiderFootWebUi') -> str:
+        """Integrations page."""
+        user = cherrypy.session.get('user', {})
+        templ = Template(filename='spiderfoot/templates/integrations.tmpl', lookup=self.lookup)
+        return templ.render(pageid='INTEGRATIONS', docroot=self.docroot, version=__version__,
+                            user=user)
+
+    @cherrypy.expose
     def index(self: 'SpiderFootWebUi') -> str:
         """BotStop landing page."""
         templ = Template(filename='spiderfoot/templates/landing.tmpl', lookup=self.lookup)

@@ -90,8 +90,38 @@ class="nav-item"><a id="nav-link-guide" href="${docroot}/guide"><i class="glyphi
           <span class="slider round"></span>
         </label>
       </li>
-
         <li class="nav-item"><a href="#aboutmodal" data-toggle="modal" data-target="#aboutmodal"><i class="glyphicon glyphicon-info-sign"></i>&nbsp;About</a></li>
+        <%
+import cherrypy as _cp
+try:
+    _user = _cp.session.get('user', {})
+except Exception:
+    _user = {}
+_name = _user.get('name', '') or _user.get('email', '')
+_avatar = _user.get('avatar', '')
+_initial = (_name[0] if _name else '?').upper()
+%>
+        % if _user:
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="padding:10px 12px;display:flex;align-items:center;gap:6px;">
+            % if _avatar:
+            <img src="${_avatar}" width="28" height="28" style="border-radius:50%;object-fit:cover;" referrerpolicy="no-referrer">
+            % else:
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#059CD7;color:#fff;font-size:13px;font-weight:700;">${_initial}</span>
+            % endif
+            <b class="caret"></b>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-right">
+            <li class="dropdown-header" style="font-weight:600;">${_name}</li>
+            <li role="separator" class="divider"></li>
+            <li><a href="${docroot}/profile"><i class="glyphicon glyphicon-user"></i>&nbsp;Profile</a></li>
+            <li><a href="${docroot}/billing"><i class="glyphicon glyphicon-credit-card"></i>&nbsp;Account</a></li>
+            <li><a href="${docroot}/integrations"><i class="glyphicon glyphicon-link"></i>&nbsp;Integrations</a></li>
+            <li role="separator" class="divider"></li>
+            <li><a href="${docroot}/logout"><i class="glyphicon glyphicon-log-out"></i>&nbsp;Sign Out</a></li>
+          </ul>
+        </li>
+        % endif
       </ul>
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
