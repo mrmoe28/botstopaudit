@@ -892,7 +892,7 @@ class SpiderFootWebUi:
             targetType = SpiderFootHelpers.targetTypeFromString(scantarget)
             if targetType is None:
                 # Should never be triggered for a re-run scan..
-                return self.error("Invalid target type. Could not recognize it as a target SpiderFoot supports.")
+                return self.error("Invalid target type. Could not recognize it as a target BotStop Audit supports.")
 
             # Start running a new scan
             scanId = SpiderFootHelpers.genScanInstanceId()
@@ -1668,7 +1668,7 @@ class SpiderFootWebUi:
                 cherrypy.response.headers['Content-Type'] = "application/json; charset=utf-8"
                 return json.dumps(["ERROR", "Unrecognised target type."]).encode('utf-8')
 
-            return self.error("Invalid target type. Could not recognize it as a target SpiderFoot supports.")
+            return self.error("Invalid target type. Could not recognize it as a target BotStop Audit supports.")
 
         # Enforce plan limits: free users get 1 scan lifetime
         session_user = cherrypy.session.get('user', {})
