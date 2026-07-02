@@ -1026,7 +1026,7 @@ class SpiderFootWebUi:
 
     @cherrypy.expose
     def google_callback(self: 'SpiderFootWebUi', code: str = '', state: str = '',
-                        error: str = '') -> None:
+                        error: str = '', iss: str = '', **_kwargs: str) -> None:
         """Handle Google OAuth callback."""
         import os
         from spiderfoot.auth import google_fetch_user
