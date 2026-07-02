@@ -83,6 +83,7 @@ class SpiderFootWebUi:
         dbh = SpiderFootDb(self.defaultConfig, init=True)
         sf = SpiderFoot(self.defaultConfig)
         self.config = sf.configUnserialize(dbh.configGet(), self.defaultConfig)
+        self.__db = SpiderFootDb(self.defaultConfig)
 
         # Set up logging
         if loggingQueue is None:
@@ -102,7 +103,7 @@ class SpiderFootWebUi:
         csp = (
             secure.ContentSecurityPolicy()
             .default_src("'self'")
-            .script_src("'self'", "'unsafe-inline'", "blob:")
+            .script_src("'self'", "'unsafe-inline'", "blob:", "https://static.cloudflareinsights.com")
             .style_src("'self'", "'unsafe-inline'")
             .base_uri("'self'")
             .connect_src("'self'", "data:")
