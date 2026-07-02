@@ -1014,7 +1014,8 @@ class SpiderFootWebUi:
         import secrets as _secrets
         from spiderfoot.auth import google_login_url
         client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
-        redirect_uri = cherrypy.request.base + self.docroot + '/google_callback'
+        base = cherrypy.request.base.replace('http://', 'https://')
+        redirect_uri = base + self.docroot + '/google_callback'
         state = _secrets.token_urlsafe(16)
         cherrypy.session['oauth_state'] = state
         url = google_login_url(client_id, redirect_uri, state)
@@ -1034,7 +1035,7 @@ class SpiderFootWebUi:
             raise cherrypy.HTTPRedirect(self.docroot + '/login')
         client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
         client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '')
-        redirect_uri = cherrypy.request.base + self.docroot + '/google_callback'
+        redirect_uri = cherrypy.request.base.replace('http://', 'https://') + self.docroot + '/google_callback'
         try:
             info = google_fetch_user(client_id, client_secret, redirect_uri, code)
         except Exception:
