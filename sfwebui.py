@@ -1622,7 +1622,7 @@ class SpiderFootWebUi:
             return self.jsonify_error('500', str(e))
 
     @cherrypy.expose
-    def startscan(self: 'SpiderFootWebUi', scanname: str, scantarget: str, modulelist: str, typelist: str, usecase: str) -> str:
+    def startscan(self: 'SpiderFootWebUi', scanname: str = '', scantarget: str = '', modulelist: str = '', typelist: str = '', usecase: str = '') -> str:
         """Initiate a scan.
 
         Args:
