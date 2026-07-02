@@ -481,7 +481,7 @@ class TestSpiderFootWebUi(unittest.TestCase):
         opts['__modules__'] = dict()
         sfwebui = SpiderFootWebUi(self.web_default_options, opts)
         start_scan = sfwebui.startscan('example scan name', 'example scan target', 'example module list', None, None)
-        self.assertIn('Invalid target type. Could not recognize it as a target SpiderFoot supports.', start_scan)
+        self.assertIn('Invalid target type. Could not recognize it as a target BotStop Audit supports.', start_scan)
 
     def test_start_scan_invalid_modules_should_return_error(self):
         """
