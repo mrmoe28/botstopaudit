@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Subscribe — BotStop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="${docroot}/static/img/botstop-icon.svg">
+  <script type="text/javascript" src="https://web.squarecdn.com/v1/square.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e2e8f0; min-height: 100vh; }
+    .nav { background: rgba(0,0,0,0.9); border-bottom: 1px solid rgba(5,156,215,0.2); padding: 0 40px; height: 60px; display: flex; align-items: center; gap: 24px; }
+    .nav-brand { color: #059CD7; text-decoration: none; font-weight: 700; font-size: 1.2rem; }
+    .wrap { max-width: 520px; margin: 60px auto; padding: 0 24px; }
+    .card { background: #111827; border: 1px solid #1e293b; border-radius: 16px; padding: 40px; }
+    .plan-badge { display: inline-block; background: rgba(5,156,215,0.15); color: #059CD7; border: 1px solid rgba(5,156,215,0.3); border-radius: 6px; padding: 4px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+    h1 { font-size: 1.6rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .price { font-size: 2.4rem; font-weight: 800; color: #059CD7; margin: 12px 0 4px; }
+    .price span { font-size: 1rem; color: #64748b; font-weight: 400; }
+    .features { list-style: none; margin: 20px 0 32px; }
+    .features li { padding: 6px 0; color: #94a3b8; font-size: 0.95rem; }
+    .features li::before { content: '✓ '; color: #059CD7; font-weight: 700; }
+    .divider { border: none; border-top: 1px solid #1e293b; margin: 28px 0; }
+    #card-container { min-height: 50px; margin-bottom: 16px; }
+    #error-msg { color: #f87171; font-size: 0.85rem; margin-bottom: 12px; min-height: 20px; }
+    .btn { width: 100%; padding: 14px; background: #059CD7; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn:hover { background: #0284c7; }
+    .btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; }
+    .secure { text-align: center; color: #475569; font-size: 0.8rem; margin-top: 12px; }
+    .back { color: #64748b; font-size: 0.85rem; text-align: center; margin-top: 20px; }
+    .back a { color: #059CD7; text-decoration: none; }
+    .sq-card-wrapper { padding: 12px; background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="${docroot}/">BotStop</a>
+  </nav>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="plan-badge">${plan_name}</div>
+      <h1>Start your subscription</h1>
+      <div class="price">\$${plan_price}<span>/month</span></div>
+      <ul class="features">
+        % if plan == 'professional':
+        <li>Unlimited security scans</li>
+        <li>Full OSINT report for every scan</li>
+        <li>Fix prompts for every finding</li>
+        <li>Cancel anytime</li>
+        % else:
+        <li>Unlimited security scans</li>
+        <li>Multi-client management</li>
+        <li>Full OSINT report for every scan</li>
+        <li>Fix prompts for every finding</li>
+        <li>Priority support</li>
+        <li>Cancel anytime</li>
+        % endif
+      </ul>
+      <hr class="divider">
+      <div id="card-container"></div>
+      <div id="error-msg"></div>
+      <button id="pay-btn" class="btn">Subscribe — \$${plan_price}/mo</button>
+      <p class="secure">Secured by Square. Card data never touches our servers.</p>
+    </div>
+    <div class="back"><a href="${docroot}/">← Back to home</a></div>
+  </div>
+
+  <script>
+    const APP_ID = "${square_app_id}";
+    const LOCATION_ID = "${square_location_id}";
+    const PLAN = "${plan}";
+    const DOCROOT = "${docroot}";
+
+    async function initSquare() {
+      if (!window.Square) {
+        document.getElementById('error-msg').textContent = 'Payment SDK failed to load. Please refresh.';
+        return;
+      }
+      const payments = window.Square.payments(APP_ID, LOCATION_ID);
+      const card = await payments.card({
+        style: {
+          '.input-container': { borderColor: '#1e293b', borderRadius: '6px' },
+          '.input-container.is-focus': { borderColor: '#059CD7' },
+          input: { color: '#e2e8f0', backgroundColor: '#0f172a' },
+          'input::placeholder': { color: '#475569' },
+        }
+      });
+      await card.attach('#card-container');
+
+      document.getElementById('pay-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('pay-btn');
+        const errEl = document.getElementById('error-msg');
+        btn.disabled = true;
+        btn.textContent = 'Processing…';
+        errEl.textContent = '';
+        try {
+          const result = await card.tokenize();
+          if (result.status === 'OK') {
+            const resp = await fetch(DOCROOT + '/subscribe_confirm', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ nonce: result.token, plan: PLAN })
+            });
+            const data = await resp.json();
+            if (data.ok) {
+              window.location.href = DOCROOT + '/newscan?subscribed=1';
+            } else {
+              errEl.textContent = data.error || 'Payment failed. Please try again.';
+              btn.disabled = false;
+              btn.textContent = 'Subscribe — \$${plan_price}/mo';
+            }
+          } else {
+            errEl.textContent = result.errors.map(e => e.message).join(', ');
+            btn.disabled = false;
+            btn.textContent = 'Subscribe — \$${plan_price}/mo';
+          }
+        } catch (e) {
+          errEl.textContent = 'An error occurred. Please try again.';
+          btn.disabled = false;
+          btn.textContent = 'Subscribe — \$${plan_price}/mo';
+        }
+      });
+    }
+
+    initSquare();
+  </script>
+</body>
+</html>

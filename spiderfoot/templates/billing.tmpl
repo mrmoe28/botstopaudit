@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Billing — BotStop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="${docroot}/static/img/botstop-icon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e2e8f0; min-height: 100vh; }
+    .nav { background: rgba(0,0,0,0.9); border-bottom: 1px solid rgba(5,156,215,0.2); padding: 0 40px; height: 60px; display: flex; align-items: center; gap: 24px; }
+    .nav-brand { color: #059CD7; text-decoration: none; font-weight: 700; font-size: 1.2rem; }
+    .nav a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
+    .nav a:hover { color: #fff; }
+    .wrap { max-width: 600px; margin: 60px auto; padding: 0 24px; }
+    h1 { font-size: 1.8rem; font-weight: 700; color: #fff; margin-bottom: 32px; }
+    .card { background: #111827; border: 1px solid #1e293b; border-radius: 16px; padding: 32px; margin-bottom: 20px; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1e293b; }
+    .row:last-child { border-bottom: none; }
+    .label { color: #64748b; font-size: 0.9rem; }
+    .value { color: #e2e8f0; font-weight: 500; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .badge-free { background: #1e293b; color: #64748b; }
+    .badge-pro { background: rgba(5,156,215,0.15); color: #059CD7; border: 1px solid rgba(5,156,215,0.3); }
+    .badge-agency { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+    .badge-active { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: background 0.2s; }
+    .btn-primary { background: #059CD7; color: #fff; }
+    .btn-primary:hover { background: #0284c7; }
+    .btn-danger { background: transparent; color: #f87171; border: 1px solid #f87171; }
+    .btn-danger:hover { background: rgba(248,113,113,0.1); }
+    .actions { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+    #cancel-msg { color: #f87171; font-size: 0.85rem; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="${docroot}/">BotStop</a>
+    <a href="${docroot}/scans">Scans</a>
+    <a href="${docroot}/newscan">New Scan</a>
+  </nav>
+
+  <div class="wrap">
+    <h1>Billing</h1>
+    <div class="card">
+      <div class="row">
+        <span class="label">Email</span>
+        <span class="value">${user.get('email','')}</span>
+      </div>
+      <div class="row">
+        <span class="label">Current Plan</span>
+        <span class="value">
+          % if plan == 'professional':
+          <span class="badge badge-pro">Professional — $97/mo</span>
+          % elif plan == 'agency':
+          <span class="badge badge-agency">Agency — $297/mo</span>
+          % else:
+          <span class="badge badge-free">Free</span>
+          % endif
+        </span>
+      </div>
+      <div class="row">
+        <span class="label">Scans Run</span>
+        <span class="value">${user.get('scan_count', 0)}</span>
+      </div>
+      % if sub_status:
+      <div class="row">
+        <span class="label">Subscription Status</span>
+        <span class="value"><span class="badge badge-active">${sub_status}</span></span>
+      </div>
+      % endif
+    </div>
+
+    <div class="actions">
+      % if plan == 'free':
+      <a href="${docroot}/subscribe?plan=professional" class="btn btn-primary">Upgrade to Professional — $97/mo</a>
+      <a href="${docroot}/subscribe?plan=agency" class="btn btn-primary" style="background:#7c3aed">Upgrade to Agency — $297/mo</a>
+      % elif plan == 'professional':
+      <a href="${docroot}/subscribe?plan=agency" class="btn btn-primary" style="background:#7c3aed">Upgrade to Agency — $297/mo</a>
+      <button class="btn btn-danger" onclick="cancelSub()">Cancel Subscription</button>
+      % else:
+      <button class="btn btn-danger" onclick="cancelSub()">Cancel Subscription</button>
+      % endif
+    </div>
+    <div id="cancel-msg"></div>
+  </div>
+
+  <script>
+  function cancelSub() {
+    if (!confirm('Cancel your subscription? You will lose access at the end of the billing period.')) return;
+    fetch('${docroot}/cancel_subscription', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) { window.location.reload(); }
+        else { document.getElementById('cancel-msg').textContent = d.error || 'Cancel failed.'; }
+      });
+  }
+  </script>
+</body>
+</html>

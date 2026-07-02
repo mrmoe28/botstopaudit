@@ -405,6 +405,19 @@ class SpiderFootDb:
                 self.dbh.execute("ALTER TABLE tbl_scan_instance ADD COLUMN user_id TEXT")
                 self.conn.commit()
 
+            # Subscription billing columns
+            for col, defval in [
+                ("plan", "'free'"),
+                ("scan_count", "0"),
+                ("sq_customer_id", "NULL"),
+                ("sq_subscription_id", "NULL"),
+            ]:
+                try:
+                    self.dbh.execute(f"SELECT {col} FROM tbl_users LIMIT 1")
+                except sqlite3.Error:
+                    self.dbh.execute(f"ALTER TABLE tbl_users ADD COLUMN {col} TEXT DEFAULT {defval}")
+                    self.conn.commit()
+
             if init:
                 for row in self.eventDetails:
                     event = row[0]
@@ -1947,3 +1960,41 @@ class SpiderFootDb:
         return {'id': row[0], 'email': row[1], 'name': row[2],
                 'google_sub': row[3], 'avatar_url': row[4], 'password_hash': row[5],
                 'role': row[6]}
+
+    def userGetById(self, user_id: str) -> dict:
+        qry = ("SELECT id, email, name, google_sub, avatar_url, password_hash, role, "
+               "plan, scan_count, sq_customer_id, sq_subscription_id "
+               "FROM tbl_users WHERE id = ?")
+        with self.dbhLock:
+            try:
+                self.dbh.execute(qry, (user_id,))
+                row = self.dbh.fetchone()
+            except sqlite3.Error:
+                return None
+        if not row:
+            return None
+        return {'id': row[0], 'email': row[1], 'name': row[2],
+                'google_sub': row[3], 'avatar_url': row[4], 'password_hash': row[5],
+                'role': row[6], 'plan': row[7] or 'free',
+                'scan_count': row[8] or 0,
+                'sq_customer_id': row[9], 'sq_subscription_id': row[10]}
+
+    def userUpdatePlan(self, user_id: str, plan: str, sq_customer_id: str, sq_subscription_id: str) -> None:
+        qry = "UPDATE tbl_users SET plan=?, sq_customer_id=?, sq_subscription_id=? WHERE id=?"
+        with self.dbhLock:
+            try:
+                self.dbh.execute(qry, (plan, sq_customer_id, sq_subscription_id, user_id))
+                self.conn.commit()
+            except sqlite3.Error as e:
+                raise IOError("Failed to update user plan") from e
+
+    def userIncrementScanCount(self, user_id: str) -> int:
+        with self.dbhLock:
+            try:
+                self.dbh.execute("UPDATE tbl_users SET scan_count = scan_count + 1 WHERE id=?", (user_id,))
+                self.conn.commit()
+                self.dbh.execute("SELECT scan_count FROM tbl_users WHERE id=?", (user_id,))
+                row = self.dbh.fetchone()
+                return row[0] if row else 0
+            except sqlite3.Error:
+                return 0

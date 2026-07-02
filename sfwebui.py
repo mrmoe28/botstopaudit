@@ -39,6 +39,7 @@ from spiderfoot import SpiderFootDb
 from spiderfoot import SpiderFootHelpers
 from spiderfoot import __version__
 from spiderfoot.logger import logListenerSetup, logWorkerSetup
+import spiderfoot.square_billing as square_billing
 
 mp.set_start_method("spawn", force=True)
 
@@ -1082,6 +1083,110 @@ class SpiderFootWebUi:
     terms._cp_config = {'tools.check_auth.on': False}
 
     @cherrypy.expose
+    def subscribe(self: 'SpiderFootWebUi', plan: str = 'professional') -> str:
+        """Subscription checkout page."""
+        if plan not in ('professional', 'agency'):
+            raise cherrypy.HTTPRedirect(self.docroot + '/')
+        plan_meta = {
+            'professional': ('Professional', '97'),
+            'agency': ('Agency', '297'),
+        }
+        plan_name, plan_price = plan_meta[plan]
+        import os
+        templ = Template(filename='spiderfoot/templates/subscribe.tmpl', lookup=self.lookup)
+        return templ.render(
+            pageid='SUBSCRIBE',
+            docroot=self.docroot,
+            version=__version__,
+            plan=plan,
+            plan_name=plan_name,
+            plan_price=plan_price,
+            square_app_id=os.environ.get('SQUARE_APPLICATION_ID', ''),
+            square_location_id=os.environ.get('SQUARE_LOCATION_ID', ''),
+        )
+
+    subscribe._cp_config = {'tools.check_auth.on': False}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def subscribe_confirm(self: 'SpiderFootWebUi') -> dict:
+        """Handle Square card tokenization and create subscription."""
+        if cherrypy.request.method != 'POST':
+            cherrypy.response.status = 405
+            return {'ok': False, 'error': 'Method not allowed'}
+        try:
+            body = json.loads(cherrypy.request.body.read())
+            nonce = body.get('nonce', '').strip()
+            plan = body.get('plan', '').strip()
+        except Exception:
+            cherrypy.response.status = 400
+            return {'ok': False, 'error': 'Invalid request'}
+
+        if not nonce or plan not in ('professional', 'agency'):
+            cherrypy.response.status = 400
+            return {'ok': False, 'error': 'Missing nonce or invalid plan'}
+
+        user = cherrypy.session.get('user')
+        if not user:
+            cherrypy.response.status = 401
+            return {'ok': False, 'error': 'Not logged in'}
+
+        try:
+            customer = square_billing.create_customer(user['email'], user.get('name', user['email']))
+            card_id = square_billing.save_card(customer['id'], nonce)
+            sub = square_billing.create_subscription(customer['id'], card_id, plan)
+            self.__db.userUpdatePlan(user['id'], plan, customer['id'], sub['id'])
+            cherrypy.session['user'] = dict(user, plan=plan)
+            return {'ok': True}
+        except RuntimeError as e:
+            cherrypy.response.status = 402
+            return {'ok': False, 'error': str(e)}
+
+    subscribe_confirm._cp_config = {'tools.check_auth.on': False}
+
+    @cherrypy.expose
+    def billing(self: 'SpiderFootWebUi') -> str:
+        """Billing management page."""
+        user = cherrypy.session.get('user', {})
+        db_user = self.__db.userGetById(user.get('id', '')) or {}
+        plan = db_user.get('plan', 'free')
+        sub_id = db_user.get('sq_subscription_id')
+        sub_status = ''
+        if sub_id:
+            try:
+                sub = square_billing.get_subscription(sub_id)
+                sub_status = sub.get('status', '')
+            except Exception:
+                sub_status = 'UNKNOWN'
+        templ = Template(filename='spiderfoot/templates/billing.tmpl', lookup=self.lookup)
+        return templ.render(
+            pageid='BILLING',
+            docroot=self.docroot,
+            version=__version__,
+            user=db_user,
+            plan=plan,
+            sub_status=sub_status,
+            sub_id=sub_id or '',
+        )
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def cancel_subscription(self: 'SpiderFootWebUi') -> dict:
+        """Cancel active Square subscription."""
+        if cherrypy.request.method != 'POST':
+            cherrypy.response.status = 405
+            return {'ok': False, 'error': 'Method not allowed'}
+        user = cherrypy.session.get('user', {})
+        db_user = self.__db.userGetById(user.get('id', ''))
+        if not db_user or not db_user.get('sq_subscription_id'):
+            return {'ok': False, 'error': 'No active subscription'}
+        ok = square_billing.cancel_subscription(db_user['sq_subscription_id'])
+        if ok:
+            self.__db.userUpdatePlan(user['id'], 'free', db_user.get('sq_customer_id', ''), '')
+            cherrypy.session['user'] = dict(user, plan='free')
+        return {'ok': ok}
+
+    @cherrypy.expose
     def scans(self: 'SpiderFootWebUi') -> str:
         """Show scan list page.
 
@@ -1546,6 +1651,20 @@ class SpiderFootWebUi:
                 return json.dumps(["ERROR", "Unrecognised target type."]).encode('utf-8')
 
             return self.error("Invalid target type. Could not recognize it as a target SpiderFoot supports.")
+
+        # Enforce plan limits: free users get 1 scan lifetime
+        session_user = cherrypy.session.get('user', {})
+        if session_user.get('id'):
+            db_user = self.__db.userGetById(session_user['id']) or {}
+            plan = db_user.get('plan', 'free')
+            scan_count = db_user.get('scan_count', 0)
+            if plan == 'free' and scan_count >= 1:
+                upgrade_url = self.docroot + '/subscribe?plan=professional'
+                if cherrypy.request.headers.get('Accept') and 'application/json' in cherrypy.request.headers.get('Accept'):
+                    cherrypy.response.headers['Content-Type'] = "application/json; charset=utf-8"
+                    return json.dumps(["ERROR", f"Free plan limit reached. Upgrade at {upgrade_url}"]).encode('utf-8')
+                raise cherrypy.HTTPRedirect(upgrade_url)
+            self.__db.userIncrementScanCount(session_user['id'])
 
         # Swap the globalscantable for the database handler
         dbh = SpiderFootDb(self.config)
