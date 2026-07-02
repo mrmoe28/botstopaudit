@@ -363,7 +363,7 @@ class SpiderFootWebUi:
                 row[4]
             ])
 
-        cherrypy.response.headers['Content-Disposition'] = f"attachment; filename=SpiderFoot-{id}.log.csv"
+        cherrypy.response.headers['Content-Disposition'] = f"attachment; filename=BotStopAudit-{id}.log.csv"
         cherrypy.response.headers['Content-Type'] = "application/csv"
         cherrypy.response.headers['Pragma'] = "no-cache"
         return fileobj.getvalue().encode('utf-8')
@@ -405,9 +405,9 @@ class SpiderFootWebUi:
                 rows.append([rule_name, correlation, rule_risk, rule_description])
 
             if scan_name:
-                fname = f"{scan_name}-SpiderFoot-correlations.xlxs"
+                fname = f"{scan_name}-BotStopAudit-correlations.xlxs"
             else:
-                fname = "SpiderFoot-correlations.xlxs"
+                fname = "BotStopAudit-correlations.xlxs"
 
             cherrypy.response.headers['Content-Disposition'] = f"attachment; filename={fname}"
             cherrypy.response.headers['Content-Type'] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -427,9 +427,9 @@ class SpiderFootWebUi:
                 parser.writerow([rule_name, correlation, rule_risk, rule_description])
 
             if scan_name:
-                fname = f"{scan_name}-SpiderFoot-correlations.csv"
+                fname = f"{scan_name}-BotStopAudit-correlations.csv"
             else:
-                fname = "SpiderFoot-correlations.csv"
+                fname = "BotStopAudit-correlations.csv"
 
             cherrypy.response.headers['Content-Disposition'] = f"attachment; filename={fname}"
             cherrypy.response.headers['Content-Type'] = "application/csv"
@@ -463,7 +463,7 @@ class SpiderFootWebUi:
                 datafield = str(row[1]).replace("<SFURL>", "").replace("</SFURL>", "")
                 rows.append([lastseen, str(row[4]), str(row[3]), str(row[2]), row[13], datafield])
 
-            fname = "SpiderFoot.xlsx"
+            fname = "BotStopAudit.xlsx"
             cherrypy.response.headers['Content-Disposition'] = f"attachment; filename={fname}"
             cherrypy.response.headers['Content-Type'] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             cherrypy.response.headers['Pragma'] = "no-cache"
@@ -481,7 +481,7 @@ class SpiderFootWebUi:
                 datafield = str(row[1]).replace("<SFURL>", "").replace("</SFURL>", "")
                 parser.writerow([lastseen, str(row[4]), str(row[3]), str(row[2]), row[13], datafield])
 
-            fname = "SpiderFoot.csv"
+            fname = "BotStopAudit.csv"
             cherrypy.response.headers['Content-Disposition'] = f"attachment; filename={fname}"
             cherrypy.response.headers['Content-Type'] = "application/csv"
             cherrypy.response.headers['Pragma'] = "no-cache"
@@ -527,9 +527,9 @@ class SpiderFootWebUi:
                             str(row[2]), row[13], datafield])
 
             if len(ids.split(',')) > 1 or scan_name == "":
-                fname = "SpiderFoot.xlsx"
+                fname = "BotStopAudit.xlsx"
             else:
-                fname = scan_name + "-SpiderFoot.xlsx"
+                fname = scan_name + "-BotStopAudit.xlsx"
 
             cherrypy.response.headers['Content-Disposition'] = f"attachment; filename={fname}"
             cherrypy.response.headers['Content-Type'] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -550,9 +550,9 @@ class SpiderFootWebUi:
                                 str(row[2]), row[13], datafield])
 
             if len(ids.split(',')) > 1 or scan_name == "":
-                fname = "SpiderFoot.csv"
+                fname = "BotStopAudit.csv"
             else:
-                fname = scan_name + "-SpiderFoot.csv"
+                fname = scan_name + "-BotStopAudit.csv"
 
             cherrypy.response.headers['Content-Disposition'] = f"attachment; filename={fname}"
             cherrypy.response.headers['Content-Type'] = "application/csv"
@@ -587,7 +587,7 @@ class SpiderFootWebUi:
                     continue
                 datafield = str(row[1]).replace("<SFURL>", "").replace("</SFURL>", "")
                 rows.append([row[0], str(row[10]), str(row[3]), str(row[2]), row[11], datafield])
-            cherrypy.response.headers['Content-Disposition'] = "attachment; filename=SpiderFoot.xlsx"
+            cherrypy.response.headers['Content-Disposition'] = "attachment; filename=BotStopAudit.xlsx"
             cherrypy.response.headers['Content-Type'] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             cherrypy.response.headers['Pragma'] = "no-cache"
             return self.buildExcel(rows, ["Updated", "Type", "Module", "Source",
@@ -602,7 +602,7 @@ class SpiderFootWebUi:
                     continue
                 datafield = str(row[1]).replace("<SFURL>", "").replace("</SFURL>", "")
                 parser.writerow([row[0], str(row[10]), str(row[3]), str(row[2]), row[11], datafield])
-            cherrypy.response.headers['Content-Disposition'] = "attachment; filename=SpiderFoot.csv"
+            cherrypy.response.headers['Content-Disposition'] = "attachment; filename=BotStopAudit.csv"
             cherrypy.response.headers['Content-Type'] = "application/csv"
             cherrypy.response.headers['Pragma'] = "no-cache"
             return fileobj.getvalue().encode('utf-8')
@@ -654,9 +654,9 @@ class SpiderFootWebUi:
                 })
 
         if len(ids.split(',')) > 1 or scan_name == "":
-            fname = "SpiderFoot.json"
+            fname = "BotStopAudit.json"
         else:
-            fname = scan_name + "-SpiderFoot.json"
+            fname = scan_name + "-BotStopAudit.json"
 
         cherrypy.response.headers['Content-Disposition'] = f"attachment; filename={fname}"
         cherrypy.response.headers['Content-Type'] = "application/json; charset=utf-8"
@@ -692,9 +692,9 @@ class SpiderFootWebUi:
             return SpiderFootHelpers.buildGraphJson([root], data)
 
         if not scan_name:
-            fname = "SpiderFoot.gexf"
+            fname = "BotStopAudit.gexf"
         else:
-            fname = scan_name + "SpiderFoot.gexf"
+            fname = scan_name + "BotStopAudit.gexf"
 
         cherrypy.response.headers['Content-Disposition'] = f"attachment; filename={fname}"
         cherrypy.response.headers['Content-Type'] = "application/gexf"
@@ -736,9 +736,9 @@ class SpiderFootWebUi:
             return None
 
         if len(ids.split(',')) > 1 or scan_name == "":
-            fname = "SpiderFoot.gexf"
+            fname = "BotStopAudit.gexf"
         else:
-            fname = scan_name + "-SpiderFoot.gexf"
+            fname = scan_name + "-BotStopAudit.gexf"
 
         cherrypy.response.headers['Content-Disposition'] = f"attachment; filename={fname}"
         cherrypy.response.headers['Content-Type'] = "application/gexf"
@@ -1275,7 +1275,7 @@ class SpiderFootWebUi:
             else:
                 content += f"{opt}={conf[opt]}\n"
 
-        cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="SpiderFoot.cfg"'
+        cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="BotStopAudit.cfg"'
         cherrypy.response.headers['Content-Type'] = "text/plain"
         return content
 
@@ -1373,7 +1373,7 @@ class SpiderFootWebUi:
 
                 allopts = json.dumps(tmp).encode('utf-8')
             except Exception as e:
-                return self.error(f"Failed to parse input file. Was it generated from SpiderFoot? ({e})")
+                return self.error(f"Failed to parse input file. Was it generated from BotStop Audit? ({e})")
 
         # Reset config to default
         if allopts == "RESET":
@@ -1799,7 +1799,7 @@ class SpiderFootWebUi:
                 return self.jsonify_error('400', f"Scan {scan_id} has already aborted.")
 
             if scan_status != "RUNNING" and scan_status != "STARTING":
-                return self.jsonify_error('400', f"The running scan is currently in the state '{scan_status}', please try again later or restart SpiderFoot.")
+                return self.jsonify_error('400', f"The running scan is currently in the state '{scan_status}', please try again later or restart BotStop Audit.")
 
         for scan_id in ids:
             dbh.scanInstanceSet(scan_id, status="ABORT-REQUESTED")
