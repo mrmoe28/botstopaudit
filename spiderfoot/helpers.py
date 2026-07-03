@@ -1,5 +1,6 @@
 #  -*- coding: utf-8 -*-
 import html
+import ipaddress
 import json
 import os
 import os.path
@@ -1509,3 +1510,66 @@ class SpiderFootHelpers():
             return False
 
         return True
+
+    # Known CDN/shared-infrastructure IP ranges. IPs in these ranges are
+    # flagged as malicious by threat intel feeds due to shared tenancy, not
+    # because the target itself is malicious (false positive pattern).
+    _CDN_RANGES = [
+        # Cloudflare
+        "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22",
+        "104.16.0.0/13", "104.24.0.0/14", "108.162.192.0/18",
+        "131.0.72.0/22", "141.101.64.0/18", "162.158.0.0/15",
+        "172.64.0.0/13", "173.245.48.0/20", "188.114.96.0/20",
+        "190.93.240.0/20", "197.234.240.0/22", "198.41.128.0/17",
+        # Fastly
+        "23.235.32.0/20", "43.249.72.0/22", "103.244.50.0/24",
+        "103.245.222.0/23", "103.245.224.0/24", "104.156.80.0/20",
+        "140.248.64.0/18", "140.248.128.0/17", "146.75.0.0/17",
+        "151.101.0.0/16", "157.52.64.0/18", "167.82.0.0/17",
+        "167.82.128.0/20", "167.82.160.0/20", "167.82.224.0/20",
+        "172.111.64.0/18", "185.31.16.0/22", "199.27.72.0/21",
+        "199.232.0.0/16",
+        # Akamai
+        "23.32.0.0/11", "23.64.0.0/14", "23.192.0.0/11",
+        "60.254.128.0/19", "63.208.196.0/22", "72.246.0.0/15",
+        "80.67.64.0/18", "88.221.0.0/16", "92.122.0.0/15",
+        "95.100.0.0/15", "96.16.0.0/15", "96.6.0.0/15",
+        "104.64.0.0/10", "184.24.0.0/13", "184.50.0.0/15",
+        "184.84.0.0/14",
+        # AWS CloudFront
+        "13.32.0.0/15", "13.35.0.0/16", "52.84.0.0/15",
+        "54.182.0.0/16", "54.192.0.0/16", "54.230.0.0/16",
+        "54.239.128.0/18", "54.240.128.0/18", "64.252.64.0/18",
+        "64.252.128.0/18", "70.132.0.0/18", "99.84.0.0/16",
+        "204.246.164.0/22", "204.246.168.0/22", "204.246.174.0/23",
+        "204.246.176.0/20", "205.251.192.0/19", "205.251.249.0/24",
+        "205.251.250.0/23", "205.251.252.0/23", "216.137.32.0/19",
+    ]
+    _CDN_NETWORKS: typing.Optional[typing.List[typing.Union[ipaddress.IPv4Network, ipaddress.IPv6Network]]] = None
+
+    @staticmethod
+    def _cdn_networks() -> typing.List[typing.Union[ipaddress.IPv4Network, ipaddress.IPv6Network]]:
+        if SpiderFootHelpers._CDN_NETWORKS is None:
+            SpiderFootHelpers._CDN_NETWORKS = [
+                ipaddress.ip_network(r) for r in SpiderFootHelpers._CDN_RANGES
+            ]
+        return SpiderFootHelpers._CDN_NETWORKS  # type: ignore[return-value]
+
+    @staticmethod
+    def isKnownCDNIP(ip: str) -> bool:
+        """Return True if ip belongs to a known CDN (Cloudflare, Fastly, Akamai, CloudFront).
+
+        These IPs are shared infrastructure; threat intel flags are almost always
+        false positives caused by other tenants on the same CDN, not the target.
+
+        Args:
+            ip (str): IPv4 address string
+
+        Returns:
+            bool: True if the IP is in a known CDN range
+        """
+        try:
+            addr = ipaddress.ip_address(ip)
+        except ValueError:
+            return False
+        return any(addr in net for net in SpiderFootHelpers._cdn_networks())

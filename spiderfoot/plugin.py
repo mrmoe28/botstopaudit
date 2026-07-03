@@ -3,6 +3,7 @@ import io
 import logging
 import os
 import queue
+import re
 import sys
 import threading
 from time import sleep
@@ -323,6 +324,7 @@ class SpiderFootPlugin():
 
         from spiderfoot import SpiderFootEvent
         from spiderfoot.module_confidence import MODULE_CONFIDENCE
+        from spiderfoot.helpers import SpiderFootHelpers
 
         if not isinstance(sfEvent, SpiderFootEvent):
             raise TypeError(f"sfEvent is {type(sfEvent)}; expected SpiderFootEvent")
@@ -334,6 +336,20 @@ class SpiderFootPlugin():
             module_conf = MODULE_CONFIDENCE.get(self.__name__, 100)
             if module_conf != 100:
                 sfEvent.confidence = module_conf
+
+        # CDN false-positive suppression: threat intel feeds routinely flag
+        # shared CDN IPs (Cloudflare, Fastly, Akamai, CloudFront) because other
+        # tenants on those IPs were malicious, not the target. Lower confidence
+        # to 20 so these don't surface as HIGH risk findings.
+        if sfEvent.eventType in ("MALICIOUS_IPADDR", "MALICIOUS_AFFILIATE_IPADDR",
+                                  "BLACKLISTED_IPADDR", "BLACKLISTED_AFFILIATE_IPADDR"):
+            src = sfEvent.sourceEvent
+            ip_candidate = src.data if src is not None else sfEvent.data
+            # ip_candidate may be "FeedName [1.2.3.4]\n..." — extract bare IP
+            m = re.search(r'\b(\d{1,3}(?:\.\d{1,3}){3})\b', ip_candidate)
+            raw_ip = m.group(1) if m else ip_candidate.strip()
+            if SpiderFootHelpers.isKnownCDNIP(raw_ip):
+                sfEvent.confidence = min(sfEvent.confidence, 20)
 
         eventName = sfEvent.eventType
         eventData = sfEvent.data
