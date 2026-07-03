@@ -8,7 +8,8 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e2e8f0; min-height: 100vh; }
-    .nav { background: rgba(0,0,0,0.9); border-bottom: 1px solid rgba(5,156,215,0.2); padding: 0 40px; height: 60px; display: flex; align-items: center; gap: 24px; }
+    .nav { background: rgba(0,0,0,0.9); border-bottom: 1px solid rgba(5,156,215,0.2); padding: 0 40px; height: 60px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+    @media (max-width: 480px) { .nav { padding: 0 16px; } .wrap { padding: 0 16px; } }
     .nav-brand { color: #059CD7; text-decoration: none; font-weight: 700; font-size: 1.2rem; }
     .nav a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
     .nav a:hover { color: #fff; }

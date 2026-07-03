@@ -42,7 +42,7 @@
 
 <div id='optsect_global' class="tab-pane active">
 <h4>Global Settings</h4>
-<table class='table table-bordered table-striped'>
+<div class='table-responsive'><table class='table table-bordered table-striped'>
 <thead><tr> <th>Option</th> <th>Value</th></tr></thead><tbody>
 % for opt in sorted(opts.keys()):
     % if not opt.startswith("__"):
@@ -87,7 +87,7 @@
     % endif
 % endfor
 </tbody>
-</table>
+</table></div>
 </div>
 % for mod in sorted(opts['__modules__'].keys()):
     <%

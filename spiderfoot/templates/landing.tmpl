@@ -125,9 +125,12 @@
 
     @media (max-width: 640px) {
       .nav { padding: 0 20px; }
-      .stats-bar { gap: 32px; }
+      .nav-links a:not(.nav-cta) { display: none; }
+      .stats-bar { gap: 32px; padding: 20px 16px; }
       .step + .step::before { display: none; }
-      footer { flex-direction: column; text-align: center; }
+      footer { flex-direction: column; text-align: center; padding: 24px 16px; }
+      .cta-box { padding: 40px 24px; }
+      .btn-primary-lg, .btn-ghost-lg { width: 100%; justify-content: center; }
     }
   </style>
 </head>
@@ -147,7 +150,7 @@
 </nav>
 
 <!-- Hero -->
-<div class="hero">
+<div class="hero mobile-hero">
   <div class="hero-inner">
     <div class="hero-badge">OSINT Exposure Intelligence</div>
     <h1>Know What Attackers<br><span>See About Your Business</span></h1>

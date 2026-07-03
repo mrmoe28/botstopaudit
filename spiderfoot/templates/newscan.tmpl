@@ -10,7 +10,7 @@
   <div class="sf-section-label">What do you want to do?</div>
   <div class="row" id="sf-mode-cards">
 
-    <div class="col-xs-12 col-sm-6 col-md-3 sf-card-col">
+    <div class="col-xs-6 col-sm-6 col-md-3 sf-card-col">
       <div class="panel panel-default sf-mode-card"
            data-mode="Investigate"
            data-placeholder="Domain, email, IP, username, or name in quotes">
@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <div class="col-xs-12 col-sm-6 col-md-3 sf-card-col">
+    <div class="col-xs-6 col-sm-6 col-md-3 sf-card-col">
       <div class="panel panel-default sf-mode-card"
            data-mode="Footprint"
            data-placeholder="Your domain, e.g. mycompany.com">
@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    <div class="col-xs-12 col-sm-6 col-md-3 sf-card-col">
+    <div class="col-xs-6 col-sm-6 col-md-3 sf-card-col">
       <div class="panel panel-default sf-mode-card"
            data-mode="Passive"
            data-placeholder="Suspicious email address or domain">
@@ -46,7 +46,7 @@
       </div>
     </div>
 
-    <div class="col-xs-12 col-sm-6 col-md-3 sf-card-col">
+    <div class="col-xs-6 col-sm-6 col-md-3 sf-card-col">
       <div class="panel panel-default sf-mode-card"
            data-mode="all"
            data-placeholder="Any domain, email, IP, username, or name in quotes">
@@ -67,14 +67,16 @@
       <div class="col-xs-12 col-sm-6">
         <div class="form-group">
           <input class="form-control input-lg" type="text" id="scantarget" name="scantarget"
-                 value="${scantarget}" placeholder="Domain, email, IP, username...">
+                 value="${scantarget}" placeholder="Domain, email, IP, username..."
+                 autocomplete="off" autocorrect="off" autocapitalize="off">
           <span class="help-block" id="sf-target-hint"></span>
         </div>
       </div>
       <div class="col-xs-12 col-sm-4">
         <div class="form-group">
           <input class="form-control input-lg" type="text" id="scanname" name="scanname"
-                 value="${scanname}" placeholder="Scan name (optional)">
+                 value="${scanname}" placeholder="Scan name (optional)"
+                 autocomplete="off" autocorrect="off" autocapitalize="off">
         </div>
       </div>
       <div class="col-xs-12 col-sm-2">

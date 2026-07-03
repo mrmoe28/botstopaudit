@@ -1,0 +1,785 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   BotStop Audit — Mobile & Tablet Responsive Styles
+   Supplements spiderfoot.css and dark.css.
+   Load order: bootstrap → spiderfoot.css → dark.css → mobile.css
+   ═══════════════════════════════════════════════════════════════════════════
+   Sections:
+     1.  Touch baseline (all breakpoints)
+     2.  Tablet  (768px – 1024px)
+     3.  Mobile  (< 768px)
+        3a. Navbar
+        3b. Layout / spacing
+        3c. Card-style tables
+        3d. Forms & inputs
+        3e. Buttons
+        3f. Panels / cards
+        3g. Scan mode cards (.sf-mode-card)
+        3h. Progress bars & badges
+        3i. Modals
+        3j. Tabs & settings sidebar
+        3k. Footer
+        3l. Graph / visualisation containers
+     4.  Dark-mode mirrors  (body.dark-theme)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ───────────────────────────────────────────────────────────────────────────
+   1. TOUCH BASELINE — applied at all widths
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Remove the blue flash on tap that browsers add by default */
+a,
+button,
+.btn,
+[role="button"],
+label,
+input,
+select,
+textarea,
+.navbar-toggle,
+.nav > li > a,
+.dropdown-toggle,
+.sf-mode-card {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure all interactive elements meet the 44×44 px minimum touch target
+   recommended by Apple HIG and WCAG 2.5.5.  We use min-height only here
+   so desktop layouts are not disturbed. */
+@media (hover: none) and (pointer: coarse) {
+  .btn,
+  .nav > li > a,
+  .dropdown-menu > li > a,
+  .navbar-toggle {
+    min-height: 44px;
+  }
+}
+
+
+/* ───────────────────────────────────────────────────────────────────────────
+   2. TABLET  768px – 1024px
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@media (min-width: 768px) and (max-width: 1024px) {
+
+  /* Main content: slightly tighter than desktop */
+  #mainbody {
+    padding: 20px 24px 60px !important;
+  }
+
+  /* 4-column grid collapses to 2-column on tablet */
+  .col-md-3 {
+    width: 50%;
+    float: left;
+  }
+
+  /* Scan mode cards: 2-up on tablet */
+  .sf-card-col {
+    width: 50%;
+    float: left;
+  }
+
+  /* Tables: let horizontal scroll work cleanly on tablet */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: none;
+  }
+
+  /* Nav stays horizontal on tablet — no hamburger needed.
+     Give nav links a comfortable touch target. */
+  .navbar-default .navbar-nav > li > a {
+    padding-top: 16px;
+    padding-bottom: 16px;
+    min-height: 44px;
+  }
+
+  /* Slightly compress the footer padding */
+  .footer {
+    padding: 10px 24px !important;
+  }
+
+  /* Reduce modal width to leave visual breathing room */
+  .modal-dialog {
+    width: 90%;
+    margin: 30px auto;
+  }
+}
+
+
+/* ───────────────────────────────────────────────────────────────────────────
+   3. MOBILE  < 768px
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+
+  /* ── 3a. NAVBAR ─────────────────────────────────────── */
+
+  /* Compact the fixed top bar height */
+  body {
+    padding-top: 50px;
+  }
+
+  .navbar.navbar-fixed-top {
+    min-height: 50px;
+  }
+
+  /* Keep brand logo visible and properly sized beside the toggle */
+  .navbar-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .navbar-brand.brand-logo {
+    float: none;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+  }
+
+  .spiderfoot-header-image {
+    height: 22px;
+  }
+
+  /* Hamburger toggle: meet the 44px touch target */
+  .navbar-toggle {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px 12px;
+    margin: 3px 4px 3px 0;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .navbar-toggle .icon-bar {
+    display: block;
+    width: 22px;
+    height: 2px;
+    border-radius: 1px;
+    background-color: #aaa;
+    transition: background-color 0.15s;
+  }
+
+  /* Smooth slide-down for collapsed menu */
+  .navbar-collapse {
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transition: height 0.25s ease;
+  }
+
+  /* Each nav item needs a solid 44px touch target */
+  .navbar-default .navbar-nav > li > a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 14px;
+  }
+
+  /* Dark mode toggler row: align nicely in collapsed menu */
+  .navbar-nav.navbar-right > li {
+    float: none;
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    min-height: 44px;
+  }
+
+  .navbar-nav.navbar-right > li > a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  /* Profile dropdown inside collapsed nav */
+  .navbar-right .dropdown-menu {
+    position: static;
+    float: none;
+    width: 100%;
+    box-shadow: none;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+  }
+
+  .navbar-right .dropdown-menu > li > a {
+    padding: 12px 20px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Dark mode switch row */
+  #toggler-text {
+    padding-left: 0;
+    margin-right: 8px;
+  }
+
+  .switch {
+    margin-top: 0;
+  }
+
+
+  /* ── 3b. LAYOUT / SPACING ───────────────────────────── */
+
+  #mainbody {
+    padding: 8px 8px 48px !important;
+  }
+
+  #mainbody > h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+  }
+
+  /* Make Bootstrap's grid go full-width on mobile */
+  .col-sm-1, .col-sm-2, .col-sm-3, .col-sm-4,
+  .col-sm-5, .col-sm-6, .col-sm-7, .col-sm-8,
+  .col-sm-9, .col-sm-10, .col-sm-11, .col-sm-12 {
+    float: none;
+    width: 100%;
+  }
+
+  /* Horizontal scroll wrapper for tables that keep row layout */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: none;
+    margin-bottom: 12px;
+  }
+
+
+  /* ── 3c. CARD-STYLE TABLES ──────────────────────────── */
+
+  /* Hide the header row — column names are shown as data-label pseudo-elements */
+  .table-responsive table thead {
+    display: none;
+  }
+
+  /* Each row becomes a card */
+  .table-responsive table tr {
+    display: block;
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  /* Each cell stacks vertically */
+  .table-responsive table td {
+    display: block;
+    text-align: left;
+    border: none;
+    padding: 4px 8px;
+    word-break: break-word;
+  }
+
+  /* Show column header as a label above the value */
+  .table-responsive table td:before {
+    content: attr(data-label);
+    font-weight: 700;
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #888;
+    margin-bottom: 1px;
+  }
+
+  /* Tablesorter pager: stack controls vertically */
+  .tablesorter-pager {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    padding: 8px !important;
+  }
+
+  .tablesorter-pager .pager-navigation {
+    order: 1;
+  }
+
+  .tablesorter-pager .pager-select {
+    order: 2;
+  }
+
+  .tablesorter-pager .pager-count {
+    order: 3;
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+  }
+
+
+  /* ── 3d. FORMS & INPUTS ─────────────────────────────── */
+
+  /* Force all inputs full-width */
+  .form-control,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 16px; /* prevents iOS auto-zoom on focus */
+    min-height: 44px;
+  }
+
+  /* Stacked label layout */
+  .form-horizontal .form-group {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .form-horizontal .control-label {
+    text-align: left;
+    padding-bottom: 4px;
+  }
+
+  /* Make .col-sm-* inside forms full-width */
+  .form-horizontal .col-sm-2,
+  .form-horizontal .col-sm-3,
+  .form-horizontal .col-sm-4,
+  .form-horizontal .col-sm-8,
+  .form-horizontal .col-sm-9,
+  .form-horizontal .col-sm-10 {
+    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Input groups: keep append/prepend working */
+  .input-group {
+    width: 100%;
+  }
+
+  .input-group .form-control {
+    width: 1% !important; /* Bootstrap override — let flex handle it */
+    flex: 1 1 auto;
+  }
+
+
+  /* ── 3e. BUTTONS ─────────────────────────────────────── */
+
+  .btn {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 14px;
+  }
+
+  /* Action buttons that sit alone go full-width */
+  .btn-block-mobile,
+  .form-group > .btn:only-child,
+  #btn-startscan,
+  #btn-save-changes,
+  #btn-reset-settings {
+    width: 100%;
+    display: block;
+  }
+
+  /* Button groups: stack on mobile */
+  .btn-group-vertical-mobile > .btn,
+  .btn-toolbar > .btn-group > .btn {
+    min-height: 44px;
+  }
+
+  /* Scan action buttons row: wrap cleanly */
+  .btn-group {
+    flex-wrap: wrap;
+  }
+
+
+  /* ── 3f. PANELS / CARDS ─────────────────────────────── */
+
+  .panel {
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 8px !important;
+  }
+
+  .panel-body {
+    padding: 12px !important;
+  }
+
+  .panel-heading {
+    padding: 10px 14px !important;
+    font-size: 13px;
+  }
+
+  /* Row gutters: cancel default 15px for full bleed panels */
+  .row {
+    margin-left: -4px;
+    margin-right: -4px;
+  }
+
+  [class*="col-"] {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+
+  /* ── 3g. SCAN MODE CARDS (.sf-mode-card) ────────────── */
+
+  /* 2-up grid on mobile (col-xs-6 equivalent) */
+  .sf-card-col {
+    width: 50%;
+    float: left;
+    padding-left: 4px;
+    padding-right: 4px;
+    margin-bottom: 8px;
+  }
+
+  .sf-mode-card {
+    min-height: 90px;
+    padding: 10px 8px;
+  }
+
+  .sf-card-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .sf-card-title {
+    font-size: 12px;
+    margin: 2px 0;
+  }
+
+  .sf-card-desc {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  /* Clearfix after card grid */
+  .sf-card-col:nth-child(2n+1) {
+    clear: left;
+  }
+
+  /* Target input section: full-width */
+  #sf-target-section .form-group {
+    margin-bottom: 8px;
+  }
+
+
+  /* ── 3h. PROGRESS BARS & BADGES ─────────────────────── */
+
+  .progress {
+    width: 100%;
+    height: 14px;
+    border-radius: 7px;
+    margin-bottom: 8px;
+  }
+
+  .progress-bar {
+    min-width: 28px;
+    font-size: 11px;
+    line-height: 14px;
+  }
+
+  /* Badges and labels: allow wrapping */
+  .label,
+  .badge {
+    display: inline-block;
+    margin: 1px 2px;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+
+  /* Scan result stat counters (#ucounter, #tcounter, #errors, #status) */
+  #sf-scan-banner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  #sf-scan-banner .label {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+
+  /* ── 3i. MODALS ─────────────────────────────────────── */
+
+  .modal-dialog {
+    width: 96%;
+    margin: 8px auto;
+  }
+
+  .modal-content {
+    border-radius: 10px !important;
+  }
+
+  .modal-header {
+    padding: 14px 16px !important;
+  }
+
+  .modal-body {
+    padding: 16px !important;
+    font-size: 13px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px !important;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Modal footer buttons full-width on small screens */
+  .modal-footer .btn {
+    width: 100%;
+    margin: 0;
+  }
+
+
+  /* ── 3j. TABS & SETTINGS SIDEBAR ───────────────────── */
+
+  /* Nav tabs: horizontally scrollable on mobile */
+  .nav-tabs {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    border-bottom: 2px solid #e2e8f0 !important;
+    margin-bottom: 12px;
+    /* hide scrollbar visually while keeping scroll */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tabs > li {
+    float: none;
+    flex-shrink: 0;
+  }
+
+  .nav-tabs > li > a {
+    padding: 8px 14px;
+    font-size: 12px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Settings sidebar tabs: wrap to a horizontal pill row */
+  .tabbable.tabs-left {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tabbable.tabs-left .nav-stacked {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
+    margin-bottom: 12px;
+    border-right: none;
+  }
+
+  .tabbable.tabs-left .nav-stacked > li {
+    float: none;
+    width: auto;
+  }
+
+  .tabbable.tabs-left .nav-stacked > li > a {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Settings tab content: full width */
+  .tabbable.tabs-left .tab-content {
+    width: 100%;
+  }
+
+
+  /* ── 3k. FOOTER ─────────────────────────────────────── */
+
+  .footer {
+    padding: 10px 12px !important;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .footer .row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+
+  /* ── 3l. GRAPH / VISUALISATION CONTAINERS ───────────── */
+
+  .graph-container {
+    height: min(240px, 40vh);
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* D3 / sigma canvases: force containment */
+  .graph-container canvas,
+  .graph-container svg {
+    max-width: 100%;
+  }
+
+  /* Breadcrumb: smaller on mobile */
+  .breadcrumb {
+    font-size: 11px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+  }
+
+  /* Alert boxes */
+  .alert {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  /* Scanlist page specific: action buttons per row */
+  #scanlist .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  /* Dropdown menus: full-width on mobile */
+  .dropdown-menu {
+    min-width: 100%;
+    left: 0;
+    right: 0;
+  }
+
+  /* Disable hover-only visual effects; rely on :active instead */
+  .sf-mode-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .sf-mode-card:active {
+    transform: scale(0.98);
+  }
+
+  .tablesorter-default tbody tr:hover td {
+    background: inherit;
+  }
+
+} /* end @media (max-width: 767px) */
+
+
+/* ───────────────────────────────────────────────────────────────────────────
+   4. DARK MODE MIRRORS  — body.dark-theme overrides for mobile + tablet
+   Applied inside breakpoints so they don't affect desktop dark mode.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Tablet dark ──────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1024px) {
+
+  body.dark-theme .modal-dialog {
+    width: 90%;
+  }
+
+}
+
+/* ── Mobile dark ──────────────────────────────────────── */
+@media (max-width: 767px) {
+
+  /* Navbar in dark mode mobile */
+  body.dark-theme .navbar-default .navbar-nav > li > a {
+    border-bottom-color: rgba(5,156,215,0.12);
+  }
+
+  body.dark-theme .navbar-toggle .icon-bar {
+    background-color: #64748b;
+  }
+
+  body.dark-theme .navbar-right .dropdown-menu {
+    background: rgba(5,10,20,0.97);
+    border-color: rgba(5,156,215,0.2);
+  }
+
+  /* Card-style table rows in dark mode */
+  body.dark-theme .table-responsive table tr {
+    background: rgba(255,255,255,0.04);
+    border-color: #444;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.4);
+  }
+
+  body.dark-theme .table-responsive table td:before {
+    color: #aaa;
+  }
+
+  body.dark-theme .table-responsive table td {
+    color: #cbd5e1;
+  }
+
+  /* Scan mode cards in dark mode on mobile */
+  body.dark-theme .sf-mode-card {
+    border-color: rgba(5,156,215,0.2);
+    background: rgba(255,255,255,0.03);
+  }
+
+  body.dark-theme .sf-mode-card:active {
+    background: rgba(5,156,215,0.1);
+    border-color: rgba(5,156,215,0.45);
+  }
+
+  /* Panels in dark mode on mobile */
+  body.dark-theme .panel {
+    border-color: #444;
+  }
+
+  /* Tabs in dark mode — scrollable rail */
+  body.dark-theme .nav-tabs {
+    border-bottom-color: rgba(5,156,215,0.2) !important;
+  }
+
+  /* Settings sidebar in dark mode */
+  body.dark-theme .tabbable.tabs-left .nav-stacked > li > a {
+    color: #64748b;
+    background: transparent;
+  }
+
+  body.dark-theme .tabbable.tabs-left .nav-stacked > li.active > a {
+    background: rgba(5,156,215,0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(5,156,215,0.35);
+  }
+
+  /* Modal in dark mode */
+  body.dark-theme .modal-footer {
+    background: rgba(255,255,255,0.02);
+  }
+
+  /* Dropdown menus in dark mode */
+  body.dark-theme .dropdown-menu {
+    background: rgba(5,10,20,0.97);
+    border-color: rgba(5,156,215,0.2);
+  }
+
+  body.dark-theme .dropdown-menu > li > a {
+    color: #cbd5e1;
+  }
+
+} /* end @media dark-theme mobile */

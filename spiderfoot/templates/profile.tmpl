@@ -18,7 +18,7 @@
         </div>
       </div>
 
-      <table class="table">
+      <div class="table-responsive"><table class="table">
         <tr>
           <td style="color:#888;width:140px;">Name</td>
           <td>${user.get('name', '—')}</td>
@@ -48,7 +48,7 @@
           <td style="color:#888;">Scans Run</td>
           <td>${db_user.get('scan_count', 0)}</td>
         </tr>
-      </table>
+      </table></div>
 
       <div style="margin-top:16px;display:flex;gap:12px;">
         <a href="${docroot}/billing" class="btn btn-primary">Manage Billing</a>
