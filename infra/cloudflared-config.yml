@@ -1,0 +1,59 @@
+tunnel: 4459baed-9bb8-4c23-877e-6ebab77aacef
+credentials-file: /root/.cloudflared/4459baed-9bb8-4c23-877e-6ebab77aacef.json
+protocol: http2
+metrics: 127.0.0.1:2000
+no-autoupdate: true
+
+# NOTE: This file (config.yml) is NOT the authoritative routing source.
+# The tunnel is remotely managed via Cloudflare Zero Trust dashboard.
+# Routing is defined in the ZT remote config (source: cloudflare, version 3).
+# Changes here have no effect unless the tunnel is switched to locally-managed.
+#
+# ZT remote ingress (authoritative):
+#   panel.lock28.com      -> http://localhost:8000
+#   cinecaster.lock28.com -> http://localhost:80
+#   botstopaudit.com      -> https://localhost:443 (noTLSVerify, httpHostHeader)
+#   catch-all             -> http://localhost:80
+
+ingress:
+  - hostname: lock28.com
+    service: http://127.0.0.1:18080
+  - hostname: www.lock28.com
+    service: http://127.0.0.1:18080
+  - hostname: energy-partner-network.lock28.com
+    service: http://127.0.0.1:18080
+  - hostname: panel.lock28.com
+    service: http://127.0.0.1:8000
+  - hostname: sub.lock28.com
+    service: http://127.0.0.1:80
+  - hostname: ops.lock28.com
+    service: https://127.0.0.1:443
+    originRequest:
+      noTLSVerify: true
+      httpHostHeader: ops.lock28.com
+  - hostname: leadboss.lock28.com
+    service: https://127.0.0.1:443
+    originRequest:
+      noTLSVerify: true
+      httpHostHeader: leadboss.lock28.com
+  - hostname: supabase.ekodevops.com
+    service: https://127.0.0.1:443
+    originRequest:
+      noTLSVerify: true
+      httpHostHeader: supabase.ekodevops.com
+  - hostname: supabase-admin.ekodevops.com
+    service: https://127.0.0.1:443
+    originRequest:
+      noTLSVerify: true
+      httpHostHeader: supabase-admin.ekodevops.com
+  - hostname: spiderfoot.lock28.com
+    service: https://127.0.0.1:443
+    originRequest:
+      noTLSVerify: true
+      httpHostHeader: spiderfoot.lock28.com
+  - hostname: botstopaudit.com
+    service: https://127.0.0.1:443
+    originRequest:
+      noTLSVerify: true
+      httpHostHeader: botstopaudit.com
+  - service: http_status:404
