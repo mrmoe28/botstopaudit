@@ -1544,6 +1544,12 @@ class SpiderFootHelpers():
         "204.246.164.0/22", "204.246.168.0/22", "204.246.174.0/23",
         "204.246.176.0/20", "205.251.192.0/19", "205.251.249.0/24",
         "205.251.250.0/23", "205.251.252.0/23", "216.137.32.0/19",
+        # GitHub Pages (documented range, api.github.com/meta -> "pages")
+        "185.199.108.0/22",
+        # Vercel (documented apex A-record anchor IP)
+        "76.76.21.21/32",
+        # Netlify (documented load balancer / apex A-record IPs)
+        "75.2.60.5/32", "99.83.190.102/32",
     ]
     _CDN_NETWORKS: typing.Optional[typing.List[typing.Union[ipaddress.IPv4Network, ipaddress.IPv6Network]]] = None
 

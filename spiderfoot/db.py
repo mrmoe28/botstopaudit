@@ -1477,12 +1477,13 @@ class SpiderFootDb:
         # retrieve scan results
         qry = "INSERT INTO tbl_scan_results \
             (scan_instance_id, hash, type, generated, confidence, \
-            visibility, risk, module, data, source_event_hash) \
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            visibility, risk, module, data, source_event_hash, false_positive) \
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
         qvals = [instanceId, sfEvent.hash, sfEvent.eventType, sfEvent.generated,
                  sfEvent.confidence, sfEvent.visibility, sfEvent.risk,
-                 sfEvent.module, storeData, sfEvent.sourceEventHash]
+                 sfEvent.module, storeData, sfEvent.sourceEventHash,
+                 int(getattr(sfEvent, 'false_positive', 0) or 0)]
 
         with self.dbhLock:
             try:
