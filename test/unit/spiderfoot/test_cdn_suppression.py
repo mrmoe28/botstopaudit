@@ -36,6 +36,8 @@ class FakeSf:
 
 
 class FakeTarget:
+    __slots__ = ("targetValue", "targetType")
+
     def __init__(self, value, ttype="INTERNET_NAME"):
         self.targetValue = value
         self.targetType = ttype
@@ -179,8 +181,10 @@ class TestCDNSuppression(unittest.TestCase):
 
     def test_cohost_not_suppressed_when_target_off_cdn(self):
         # Target not on a CDN and co-host not on a CDN -> genuine, keep it.
-        p = self._plugin(resolves={"real-target.com": ["203.0.113.5"],
-                                    "badcohost.example": ["198.51.100.9"]})
+        p = self._plugin(resolves={
+            "real-target.com": ["203.0.113.5"],
+            "badcohost.example": ["198.51.100.9"],
+        })
         p._currentTarget = FakeTarget("real-target.com")
         root = SpiderFootEvent("ROOT", "real-target.com", "", None)
         src = SpiderFootEvent("CO_HOSTED_SITE", "badcohost.example",
@@ -221,8 +225,10 @@ class TestCDNSuppression(unittest.TestCase):
         # dns2.registrar-servers.com is one of the target's nameservers ->
         # a blacklist hit on it is shared registrar infra, suppress.
         p = self._plugin_with_db(
-            providers={"PROVIDER_DNS": ["dns1.registrar-servers.com",
-                                         "dns2.registrar-servers.com"]},
+            providers={"PROVIDER_DNS": [
+                "dns1.registrar-servers.com",
+                "dns2.registrar-servers.com",
+            ]},
             resolves={"dns2.registrar-servers.com": ["156.154.132.200"]})
         root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
         src = SpiderFootEvent("AFFILIATE_INTERNET_NAME",

@@ -425,15 +425,13 @@ class SpiderFootPlugin():
                 empty if none have been stored yet).
         """
         hosts = set()
-        try:
+        with suppress(Exception):
             if self.__sfdb__ is not None and self.__scanId__:
                 for etype in ("PROVIDER_DNS", "PROVIDER_MAIL"):
                     for row in self.__sfdb__.scanResultEventUnique(
                             self.__scanId__, etype):
                         if row and row[0]:
                             hosts.add(row[0].strip().lower())
-        except Exception:
-            pass
         return hosts
 
     def _isProviderInfra(self, host: str) -> bool:
@@ -515,6 +513,12 @@ class SpiderFootPlugin():
 
         The source event carries the bare hostname; the event's own data is
         "FeedName [host]". Prefer the source, falling back to bracket extraction.
+
+        Args:
+            sfEvent (SpiderFootEvent): event to extract the hostname from
+
+        Returns:
+            str: the bare hostname
         """
         src = sfEvent.sourceEvent
         candidate = src.data if src is not None else sfEvent.data

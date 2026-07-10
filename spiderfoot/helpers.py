@@ -1612,7 +1612,7 @@ class SpiderFootHelpers():
         if not host:
             return False
         host = host.strip().lower().rstrip(".")
-        for domain in SpiderFootHelpers._SHARED_INFRA_DOMAINS:
-            if host == domain or host.endswith("." + domain):
-                return True
-        return False
+        return any(
+            host == domain or host.endswith("." + domain)
+            for domain in SpiderFootHelpers._SHARED_INFRA_DOMAINS
+        )
