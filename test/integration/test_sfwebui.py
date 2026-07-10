@@ -41,6 +41,11 @@ class TestSpiderFootWebUiRoutes(helper.CPWebCase):
         default_config['__modules__'] = SpiderFootHelpers.loadModulesAsDict(mod_dir, ['sfp_template.py'])
 
         conf = {
+            '/': {
+                # Production (sf.py) enables sessions; the handlers use
+                # cherrypy.session, so enable it here too.
+                'tools.sessions.on': True,
+            },
             '/query': {
                 'tools.encode.text_only': False,
                 'tools.encode.add_charset': True,
@@ -103,8 +108,8 @@ class TestSpiderFootWebUiRoutes(helper.CPWebCase):
     def test_newscan_returns_200(self):
         self.getPage("/newscan")
         self.assertStatus('200 OK')
-        self.assertInBody("Scan Name")
-        self.assertInBody("Scan Target")
+        self.assertInBody("scanname")
+        self.assertInBody("scantarget")
 
     def test_clonescan(self):
         self.getPage("/clonescan?id=doesnotexist")
@@ -130,7 +135,7 @@ class TestSpiderFootWebUiRoutes(helper.CPWebCase):
         self.assertStatus('200 OK')
         self.getPage("/optsexport?pattern=api_key")
         self.assertStatus('200 OK')
-        self.assertHeader("Content-Disposition", "attachment; filename=\"SpiderFoot.cfg\"")
+        self.assertHeader("Content-Disposition", "attachment; filename=\"BotStopAudit.cfg\"")
         self.assertInBody(":api_key=")
 
     def test_optsraw(self):
@@ -190,7 +195,7 @@ class TestSpiderFootWebUiRoutes(helper.CPWebCase):
     def test_startscan_unrecognized_scan_target_returns_error(self):
         self.getPage("/startscan?scanname=example-scan&scantarget=invalid-target&modulelist=doesnotexist&typelist=doesnotexist&usecase=doesnotexist")
         self.assertStatus('200 OK')
-        self.assertInBody('Invalid target type. Could not recognize it as a target SpiderFoot supports.')
+        self.assertInBody('Invalid target type. Could not recognize it as a target BotStop Audit supports.')
 
     def test_startscan_invalid_modules_returns_error(self):
         self.getPage("/startscan?scanname=example-scan&scantarget=spiderfoot.net&modulelist=&typelist=&usecase=")
