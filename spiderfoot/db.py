@@ -1540,6 +1540,58 @@ class SpiderFootDb:
 
         return min(100, round(score))
 
+    def scanFinalizeSharedInfra(self, instanceId: str) -> int:
+        """Re-evaluate shared-infrastructure false positives with complete data.
+
+        Run once at scan end: if the target's IP is shared infrastructure (it
+        hosts at least COHOST_SHARED_THRESHOLD distinct co-hosts), the
+        target-IP-tied risk findings (co-host and the target's own malicious/
+        blacklisted IP flags) are threat-intel noise about other tenants, so
+        mark them as false positives. This catches findings that fired before
+        co-host enumeration completed, which the live per-event check cannot
+        (e.g. MALICIOUS_IPADDR is emitted right after DNS resolution).
+
+        Args:
+            instanceId (str): scan instance ID
+
+        Returns:
+            int: number of findings newly marked as false positives
+        """
+        from spiderfoot.shared_infra import (
+            COHOST_SHARED_THRESHOLD, SHARED_INFRA_TARGET_IP_RISK_TYPES)
+
+        placeholders = ",".join("?" * len(SHARED_INFRA_TARGET_IP_RISK_TYPES))
+        type_params = list(SHARED_INFRA_TARGET_IP_RISK_TYPES)
+        with self.dbhLock:
+            try:
+                self.dbh.execute(
+                    "SELECT COUNT(DISTINCT data) FROM tbl_scan_results \
+                     WHERE scan_instance_id = ? AND type = 'CO_HOSTED_SITE'",
+                    [instanceId])
+                cohosts = self.dbh.fetchone()[0]
+                if cohosts < COHOST_SHARED_THRESHOLD:
+                    return 0
+
+                # Count the rows to be flagged explicitly rather than relying on
+                # cursor.rowcount, whose value after UPDATE is not consistent
+                # across SQLite versions.
+                self.dbh.execute(
+                    f"SELECT COUNT(*) FROM tbl_scan_results \
+                      WHERE scan_instance_id = ? AND false_positive = 0 \
+                      AND type IN ({placeholders})",
+                    [instanceId, *type_params])
+                to_update = self.dbh.fetchone()[0]
+                if to_update:
+                    self.dbh.execute(
+                        f"UPDATE tbl_scan_results SET false_positive = 1 \
+                          WHERE scan_instance_id = ? AND false_positive = 0 \
+                          AND type IN ({placeholders})",
+                        [instanceId, *type_params])
+                    self.conn.commit()
+                return to_update
+            except sqlite3.Error as e:
+                raise IOError("SQL error finalizing shared-infra suppression") from e
+
     def scanInstanceList(self, user_id: str = None) -> list:
         """List previously run scans, optionally filtered by user_id.
 
