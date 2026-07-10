@@ -445,9 +445,9 @@ class TestCDNSuppression(unittest.TestCase):
             updated = db.scanFinalizeSharedInfra(scan_id)
             self.assertGreaterEqual(updated, 1)
             # Target's own malicious IP suppressed...
-            self.assertEqual(self._fp_of(db, scan_id, "%203.0.113.7%"), 1)
+            self.assertEqual(self._fp_of(db, scan_id, "BadFeed [203.0.113.7]%"), 1)
             # ...but the affiliate's malicious IP is left intact.
-            self.assertEqual(self._fp_of(db, scan_id, "%198.51.100.4%"), 0)
+            self.assertEqual(self._fp_of(db, scan_id, "BadFeed [198.51.100.4]%"), 0)
             # MALICIOUS_IPADDR (weight 90) excluded; only the affiliate remains.
             # Exposure reflects the surviving affiliate finding, not the target IP.
             self.assertLess(db.scanExposureScore(scan_id), 90)
@@ -461,7 +461,7 @@ class TestCDNSuppression(unittest.TestCase):
             updated = db.scanFinalizeSharedInfra(scan_id)
             self.assertEqual(updated, 0)
             # Dedicated target: real malicious IP finding preserved.
-            self.assertEqual(self._fp_of(db, scan_id, "%203.0.113.7%"), 0)
+            self.assertEqual(self._fp_of(db, scan_id, "BadFeed [203.0.113.7]%"), 0)
         finally:
             if os.path.exists(path):
                 os.unlink(path)
