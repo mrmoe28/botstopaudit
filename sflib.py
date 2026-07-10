@@ -972,7 +972,7 @@ class SpiderFoot:
         # verify_mode=CERT_NONE intentional: OSINT scanning hits unknown/self-signed certs.
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+        ctx.verify_mode = ssl.CERT_NONE  # noqa: DUO122
         sock = ctx.wrap_socket(s, server_hostname=host)
         sock.do_handshake()
         return sock

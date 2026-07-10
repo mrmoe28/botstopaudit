@@ -8,8 +8,8 @@ from spiderfoot import SpiderFootDb
 from spiderfoot.auth import hash_password
 
 ADMIN_EMAIL = 'ekosolarize@gmail.com'
-ADMIN_NAME  = 'Admin'
-DB_PATH     = os.environ.get('SPIDERFOOT_DATA', '/var/lib/spiderfoot') + '/spiderfoot.db'
+ADMIN_NAME = 'Admin'
+DB_PATH = os.environ.get('SPIDERFOOT_DATA', '/var/lib/spiderfoot') + '/spiderfoot.db'
 
 cfg = {'__database': DB_PATH}
 dbh = SpiderFootDb(cfg)

@@ -1041,7 +1041,7 @@ class SpiderFootWebUi:
         try:
             info = google_fetch_user(client_id, client_secret, redirect_uri, code)
         except Exception:
-            raise cherrypy.HTTPRedirect(self.docroot + '/login')
+            raise cherrypy.HTTPRedirect(self.docroot + '/login') from None
         google_sub = info.get('sub', '')
         email = info.get('email', '').lower()
         name = info.get('name', email)
