@@ -146,6 +146,14 @@ class SpiderFootPlugin():
     _CDN_FP_COHOST_TYPES = frozenset((
         "MALICIOUS_COHOST", "BLACKLISTED_COHOST",
     ))
+    # List-free shared-hosting signal: if the target's IP hosts at least this
+    # many distinct co-hosted sites, it is shared/CDN infrastructure (a dedicated
+    # host has ~1), so co-host findings are noise regardless of provider. This
+    # mirrors the co-host modules' own "maxcohost" heuristic ("...as it would
+    # likely indicate web hosting"). Set conservatively high so it only fires on
+    # a strong shared-infra signal and never suppresses a genuinely dedicated
+    # target's findings.
+    _COHOST_SHARED_THRESHOLD = 20
     # Name findings are about the named host itself; judge them by that host's
     # own resolution.
     _CDN_FP_NAME_TYPES = frozenset((
@@ -169,6 +177,9 @@ class SpiderFootPlugin():
         # Cached set of the scan's DNS/mail provider hostnames (None = not yet
         # loaded, empty set = loaded-but-none-stored-yet, so keep retrying).
         self._providerHostCache = None
+        # Cached "target IP is shared (hosts many co-hosts)" flag. Monotonic:
+        # once True it stays True (co-host count only grows during a scan).
+        self._targetSharedByCohostsCache = False
 
     @property
     def log(self):
@@ -455,6 +466,32 @@ class SpiderFootPlugin():
             self._providerHostCache = self._loadProviderHosts()
         return host in self._providerHostCache
 
+    def _targetIsSharedByCohosts(self) -> bool:
+        """Return True if the target's IP hosts many distinct co-hosted sites.
+
+        A list-free shared-hosting signal: a dedicated host resolves ~1 site,
+        while shared/CDN infrastructure fronts many unrelated domains. When the
+        scan has found at least _COHOST_SHARED_THRESHOLD distinct co-hosts, the
+        co-host relationship is meaningless and co-host findings are noise. This
+        generalizes to any shared host without maintaining CDN lists.
+
+        The result is monotonic (co-host count only grows during a scan), so it
+        is cached once True; while False it is recomputed cheaply on demand,
+        since co-host events accrue as the scan progresses.
+
+        Returns:
+            bool: True if the target IP is shared by many co-hosts
+        """
+        if self._targetSharedByCohostsCache:
+            return True
+        with suppress(Exception):
+            if self.__sfdb__ is not None and self.__scanId__:
+                rows = self.__sfdb__.scanResultEventUnique(
+                    self.__scanId__, "CO_HOSTED_SITE")
+                if len(rows) >= self._COHOST_SHARED_THRESHOLD:
+                    self._targetSharedByCohostsCache = True
+        return self._targetSharedByCohostsCache
+
     def _markSharedInfraFalsePositive(self, sfEvent) -> None:
         """Flag shared-infrastructure false positives on a malicious event.
 
@@ -494,11 +531,13 @@ class SpiderFootPlugin():
             if SpiderFootHelpers.isKnownCDNIP(raw_ip):
                 sfEvent.false_positive = 1
         elif etype in self._CDN_FP_COHOST_TYPES:
-            # Decisive signal is the target's IP. Fall back to the co-host's own
-            # resolution so it is still caught if the target lookup is
-            # unavailable but the co-host clearly resolves onto a CDN.
-            if self._targetOnCDN() or self._cdnHostIsFalsePositive(
-                    self._extractHost(sfEvent)):
+            # Suppress when the co-host relationship is meaningless: the target
+            # is on a known CDN, OR (list-free) its IP hosts many distinct
+            # co-hosts (shared/CDN infra), OR the co-host itself resolves onto a
+            # known CDN. The cardinality signal generalizes to any shared host.
+            if (self._targetOnCDN()
+                    or self._targetIsSharedByCohosts()
+                    or self._cdnHostIsFalsePositive(self._extractHost(sfEvent))):
                 sfEvent.false_positive = 1
         elif etype in self._CDN_FP_NAME_TYPES:
             host = self._extractHost(sfEvent)

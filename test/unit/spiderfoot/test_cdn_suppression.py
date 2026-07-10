@@ -221,6 +221,48 @@ class TestCDNSuppression(unittest.TestCase):
         p.__scanId__ = "SCAN1"
         return p
 
+    def test_cohost_suppressed_via_cardinality_no_lists(self):
+        # Target NOT on a known CDN and co-host NOT on a known CDN, but the IP
+        # hosts many distinct co-hosts -> shared infra -> suppress (list-free).
+        cohosts = [f"neighbor{i}.example" for i in range(25)]
+        p = self._plugin_with_db(
+            providers={"CO_HOSTED_SITE": cohosts},
+            resolves={"real-target.com": ["203.0.113.5"],
+                      "badneighbor.example": ["198.51.100.9"]})
+        p._currentTarget = FakeTarget("real-target.com")
+        root = SpiderFootEvent("ROOT", "real-target.com", "", None)
+        src = SpiderFootEvent("CO_HOSTED_SITE", "badneighbor.example",
+                              "sfp_cohost", root)
+        evt = SpiderFootEvent("MALICIOUS_COHOST", "Feed [badneighbor.example]",
+                              "sfp_x", src)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 1)
+
+    def test_cohost_not_suppressed_below_cardinality(self):
+        # Few co-hosts (dedicated host) + not on a CDN -> genuine, keep it.
+        cohosts = [f"neighbor{i}.example" for i in range(3)]
+        p = self._plugin_with_db(
+            providers={"CO_HOSTED_SITE": cohosts},
+            resolves={"real-target.com": ["203.0.113.5"],
+                      "badneighbor.example": ["198.51.100.9"]})
+        p._currentTarget = FakeTarget("real-target.com")
+        root = SpiderFootEvent("ROOT", "real-target.com", "", None)
+        src = SpiderFootEvent("CO_HOSTED_SITE", "badneighbor.example",
+                              "sfp_cohost", root)
+        evt = SpiderFootEvent("MALICIOUS_COHOST", "Feed [badneighbor.example]",
+                              "sfp_x", src)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 0)
+
+    def test_cohost_cardinality_cached_monotonic(self):
+        cohosts = [f"n{i}.example" for i in range(25)]
+        p = self._plugin_with_db(providers={"CO_HOSTED_SITE": cohosts})
+        db = p.__sfdb__
+        self.assertTrue(p._targetIsSharedByCohosts())
+        self.assertTrue(p._targetIsSharedByCohosts())
+        # Once True it is cached: no further DB queries.
+        self.assertEqual(db.calls, 1)
+
     def test_nameserver_flagged_as_provider_infra(self):
         # dns2.registrar-servers.com is one of the target's nameservers ->
         # a blacklist hit on it is shared registrar infra, suppress.
