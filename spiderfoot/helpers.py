@@ -1544,6 +1544,12 @@ class SpiderFootHelpers():
         "204.246.164.0/22", "204.246.168.0/22", "204.246.174.0/23",
         "204.246.176.0/20", "205.251.192.0/19", "205.251.249.0/24",
         "205.251.250.0/23", "205.251.252.0/23", "216.137.32.0/19",
+        # GitHub Pages (documented range, api.github.com/meta -> "pages")
+        "185.199.108.0/22",
+        # Vercel (documented apex A-record anchor IP)
+        "76.76.21.21/32",
+        # Netlify (documented load balancer / apex A-record IPs)
+        "75.2.60.5/32", "99.83.190.102/32",
     ]
     _CDN_NETWORKS: typing.Optional[typing.List[typing.Union[ipaddress.IPv4Network, ipaddress.IPv6Network]]] = None
 
@@ -1573,3 +1579,40 @@ class SpiderFootHelpers():
         except ValueError:
             return False
         return any(addr in net for net in SpiderFootHelpers._cdn_networks())
+
+    # Shared registrar / managed-DNS / mail-routing provider domains. Blocklists
+    # routinely flag these because they serve many unrelated tenants, so a
+    # malicious/blacklisted flag on a host under one of them is almost always a
+    # false positive about the shared infrastructure, not the target. A hostname
+    # matches if it equals a domain or is a subdomain of it. This is a curated
+    # allowlist and expected to be extended over time.
+    _SHARED_INFRA_DOMAINS = frozenset((
+        # Namecheap (registrar, DNS, hosting, mail forwarding)
+        "registrar-servers.com", "namecheaphosting.com", "web-hosting.com",
+        # Microsoft 365 / Exchange Online Protection mail routing
+        "protection.outlook.com",
+        # GoDaddy managed DNS
+        "domaincontrol.com",
+        # NS1 managed DNS
+        "nsone.net",
+        # DNS Made Easy managed DNS
+        "dnsmadeeasy.com",
+    ))
+
+    @staticmethod
+    def isSharedInfraHost(host: str) -> bool:
+        """Return True if host belongs to a known shared registrar/DNS/mail provider.
+
+        Args:
+            host (str): hostname
+
+        Returns:
+            bool: True if host is (or is a subdomain of) a shared-infra domain
+        """
+        if not host:
+            return False
+        host = host.strip().lower().rstrip(".")
+        return any(
+            host == domain or host.endswith("." + domain)
+            for domain in SpiderFootHelpers._SHARED_INFRA_DOMAINS
+        )

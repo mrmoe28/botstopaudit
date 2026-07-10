@@ -133,6 +133,26 @@ class SpiderFootPlugin():
     # Maximum threads
     maxThreads = 1
 
+    # CDN false-positive suppression (see notifyListeners). IP-typed events
+    # whose IP is in a known CDN range, and hostname-typed events that resolve
+    # into a known CDN range, are marked as false positives.
+    _CDN_FP_IP_TYPES = frozenset((
+        "MALICIOUS_IPADDR", "MALICIOUS_AFFILIATE_IPADDR",
+        "BLACKLISTED_IPADDR", "BLACKLISTED_AFFILIATE_IPADDR",
+    ))
+    # Co-host findings are derived from another site sharing the *target's* IP,
+    # so on shared-CDN infrastructure the relationship itself is bogus: the
+    # decisive signal is whether the target sits on a CDN, not the co-host.
+    _CDN_FP_COHOST_TYPES = frozenset((
+        "MALICIOUS_COHOST", "BLACKLISTED_COHOST",
+    ))
+    # Name findings are about the named host itself; judge them by that host's
+    # own resolution.
+    _CDN_FP_NAME_TYPES = frozenset((
+        "MALICIOUS_INTERNET_NAME", "BLACKLISTED_INTERNET_NAME",
+        "MALICIOUS_AFFILIATE_INTERNET_NAME", "BLACKLISTED_AFFILIATE_INTERNET_NAME",
+    ))
+
     def __init__(self) -> None:
         # Holds the thread object when module threading is enabled
         self.thread = None
@@ -140,6 +160,15 @@ class SpiderFootPlugin():
         self._log = None
         # Shared thread pool for all modules
         self.sharedThreadPool = None
+        # Per-module cache of hostname -> bool (resolves into a known CDN range),
+        # used by CDN false-positive suppression to avoid repeated DNS lookups.
+        self._cdnHostCache = {}
+        # Cached per-module answer to "does the scan target sit on a CDN?"
+        # (None = not yet computed). The target doesn't change during a scan.
+        self._targetOnCDNCache = None
+        # Cached set of the scan's DNS/mail provider hostnames (None = not yet
+        # loaded, empty set = loaded-but-none-stored-yet, so keep retrying).
+        self._providerHostCache = None
 
     @property
     def log(self):
@@ -310,6 +339,194 @@ class SpiderFootPlugin():
         """
         return dict()
 
+    def _cdnHostIsFalsePositive(self, host: str) -> bool:
+        """Return True if a hostname resolves into a known CDN/edge range.
+
+        Used by CDN false-positive suppression for co-host and internet-name
+        findings: on shared CDN infrastructure the co-hosting/affiliate
+        relationship is meaningless, so a malicious/blacklisted flag on such a
+        host is almost always about another tenant, not the target.
+
+        Results are cached per module instance to avoid repeated DNS lookups.
+
+        Args:
+            host (str): hostname to check
+
+        Returns:
+            bool: True if the host resolves into a known CDN range
+        """
+        from spiderfoot.helpers import SpiderFootHelpers
+
+        if not host:
+            return False
+
+        cached = self._cdnHostCache.get(host)
+        if cached is not None:
+            return cached
+
+        result = False
+        try:
+            # If the value is already a bare IP, check it directly.
+            if self.sf is not None and self.sf.validIP(host):
+                result = SpiderFootHelpers.isKnownCDNIP(host)
+            elif self.sf is not None:
+                for ip in self.sf.resolveHost(host):
+                    if SpiderFootHelpers.isKnownCDNIP(ip):
+                        result = True
+                        break
+        except Exception:
+            result = False
+
+        self._cdnHostCache[host] = result
+        return result
+
+    def _targetOnCDN(self) -> bool:
+        """Return True if the current scan target resolves onto a known CDN range.
+
+        Co-host findings exist because another site shares the target's IP; when
+        that IP is CDN/edge infrastructure the co-hosting relationship is
+        meaningless. Computed once per module instance (the target is fixed for
+        a scan) and cached.
+
+        Returns:
+            bool: True if the scan target sits on a known CDN range
+        """
+        from spiderfoot.helpers import SpiderFootHelpers
+
+        if self._targetOnCDNCache is not None:
+            return self._targetOnCDNCache
+
+        result = False
+        try:
+            target = self.getTarget()
+        except Exception:
+            target = None
+
+        if target is not None and self.sf is not None:
+            value = (target.targetValue or "").strip()
+            ips = []
+            if target.targetType in ("IP_ADDRESS", "IPV6_ADDRESS"):
+                ips = [value]
+            elif value:
+                ips = self.sf.resolveHost(value)
+            for ip in ips:
+                if SpiderFootHelpers.isKnownCDNIP(ip):
+                    result = True
+                    break
+
+        self._targetOnCDNCache = result
+        return result
+
+    def _loadProviderHosts(self) -> set:
+        """Load the scan's DNS/mail provider hostnames from the database.
+
+        Returns:
+            set: lowercased PROVIDER_DNS / PROVIDER_MAIL hostnames (possibly
+                empty if none have been stored yet).
+        """
+        hosts = set()
+        with suppress(Exception):
+            if self.__sfdb__ is not None and self.__scanId__:
+                for etype in ("PROVIDER_DNS", "PROVIDER_MAIL"):
+                    for row in self.__sfdb__.scanResultEventUnique(
+                            self.__scanId__, etype):
+                        if row and row[0]:
+                            hosts.add(row[0].strip().lower())
+        return hosts
+
+    def _isProviderInfra(self, host: str) -> bool:
+        """Return True if host is one of the target's DNS/mail providers.
+
+        A blacklist/malicious flag on the target's own nameserver or
+        mail-forwarder is shared-infrastructure noise (that infra serves many
+        unrelated domains), not a threat to the target. The provider set is
+        cached per module; while it is still empty it is reloaded on demand,
+        since provider events may not be stored when the first flag fires.
+
+        Args:
+            host (str): hostname to check
+
+        Returns:
+            bool: True if host is a known DNS/mail provider for this scan
+        """
+        if not host:
+            return False
+        if not self._providerHostCache:
+            self._providerHostCache = self._loadProviderHosts()
+        return host in self._providerHostCache
+
+    def _markSharedInfraFalsePositive(self, sfEvent) -> None:
+        """Flag shared-infrastructure false positives on a malicious event.
+
+        Two shared-infrastructure patterns are suppressed:
+
+        1. CDN/edge IPs (Cloudflare, Fastly, Akamai, CloudFront, GitHub Pages,
+           Vercel, Netlify): threat-intel feeds flag them because of *other*
+           tenants, and on shared IPs the co-host/affiliate relationship is
+           meaningless.
+        2. The target's own DNS/mail providers (nameservers, mail forwarders):
+           blocklists routinely flag shared registrar/mail infrastructure that
+           serves many unrelated domains.
+
+        Setting false_positive=1 excludes the finding from the exposure score
+        and hides it in the UI.
+
+        For IP-typed events the IP is taken from the source (or own) data.
+        Co-host events are judged by the *target's* IP (the co-host relationship
+        is derived from sharing it), while name events are judged by the named
+        host's own resolution. In both host cases the source event data holds
+        the bare hostname (e.g. a CO_HOSTED_SITE) while the event's own data is
+        "Feed [host]"; prefer the source, falling back to bracket extraction.
+
+        Args:
+            sfEvent (SpiderFootEvent): event to inspect and possibly flag
+        """
+        from spiderfoot.helpers import SpiderFootHelpers
+
+        etype = sfEvent.eventType
+        src = sfEvent.sourceEvent
+
+        if etype in self._CDN_FP_IP_TYPES:
+            ip_candidate = src.data if src is not None else sfEvent.data
+            # ip_candidate may be "FeedName [1.2.3.4]\n..." — extract bare IP
+            m = re.search(r'\b(\d{1,3}(?:\.\d{1,3}){3})\b', ip_candidate)
+            raw_ip = m.group(1) if m else ip_candidate.strip()
+            if SpiderFootHelpers.isKnownCDNIP(raw_ip):
+                sfEvent.false_positive = 1
+        elif etype in self._CDN_FP_COHOST_TYPES:
+            # Decisive signal is the target's IP. Fall back to the co-host's own
+            # resolution so it is still caught if the target lookup is
+            # unavailable but the co-host clearly resolves onto a CDN.
+            if self._targetOnCDN() or self._cdnHostIsFalsePositive(
+                    self._extractHost(sfEvent)):
+                sfEvent.false_positive = 1
+        elif etype in self._CDN_FP_NAME_TYPES:
+            host = self._extractHost(sfEvent)
+            if (self._cdnHostIsFalsePositive(host)
+                    or self._isProviderInfra(host)
+                    or SpiderFootHelpers.isSharedInfraHost(host)):
+                sfEvent.false_positive = 1
+
+    @staticmethod
+    def _extractHost(sfEvent) -> str:
+        """Extract the bare hostname from a malicious/blacklisted host event.
+
+        The source event carries the bare hostname; the event's own data is
+        "FeedName [host]". Prefer the source, falling back to bracket extraction.
+
+        Args:
+            sfEvent (SpiderFootEvent): event to extract the hostname from
+
+        Returns:
+            str: the bare hostname
+        """
+        src = sfEvent.sourceEvent
+        candidate = src.data if src is not None else sfEvent.data
+        m = re.search(r'\[([^\]]+)\]', candidate)
+        host = (m.group(1) if m else candidate).strip().lower()
+        # Guard against multi-line / URL-suffixed values.
+        return host.split()[0] if host.split() else host
+
     def notifyListeners(self, sfEvent) -> None:
         """Call the handleEvent() method of every other plug-in listening for
         events from this plug-in. Remember that those plug-ins will be called
@@ -324,7 +541,6 @@ class SpiderFootPlugin():
 
         from spiderfoot import SpiderFootEvent
         from spiderfoot.module_confidence import MODULE_CONFIDENCE
-        from spiderfoot.helpers import SpiderFootHelpers
 
         if not isinstance(sfEvent, SpiderFootEvent):
             raise TypeError(f"sfEvent is {type(sfEvent)}; expected SpiderFootEvent")
@@ -337,19 +553,7 @@ class SpiderFootPlugin():
             if module_conf != 100:
                 sfEvent.confidence = module_conf
 
-        # CDN false-positive suppression: threat intel feeds routinely flag
-        # shared CDN IPs (Cloudflare, Fastly, Akamai, CloudFront) because other
-        # tenants on those IPs were malicious, not the target. Lower confidence
-        # to 20 so these don't surface as HIGH risk findings.
-        if sfEvent.eventType in ("MALICIOUS_IPADDR", "MALICIOUS_AFFILIATE_IPADDR",
-                                  "BLACKLISTED_IPADDR", "BLACKLISTED_AFFILIATE_IPADDR"):
-            src = sfEvent.sourceEvent
-            ip_candidate = src.data if src is not None else sfEvent.data
-            # ip_candidate may be "FeedName [1.2.3.4]\n..." — extract bare IP
-            m = re.search(r'\b(\d{1,3}(?:\.\d{1,3}){3})\b', ip_candidate)
-            raw_ip = m.group(1) if m else ip_candidate.strip()
-            if SpiderFootHelpers.isKnownCDNIP(raw_ip):
-                sfEvent.confidence = min(sfEvent.confidence, 20)
+        self._markSharedInfraFalsePositive(sfEvent)
 
         eventName = sfEvent.eventType
         eventData = sfEvent.data

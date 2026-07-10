@@ -51,6 +51,9 @@ class SpiderFootEvent():
         self.confidence = 100
         self.visibility = 100
         self.risk = 0
+        # Set to 1 by CDN false-positive suppression (see plugin.notifyListeners)
+        # to exclude shared-CDN/co-host findings from the exposure score.
+        self.false_positive = 0
         self.sourceEvent = sourceEvent
         self.__id = f"{self.eventType}{self.generated}{self.module}{random.SystemRandom().randint(0, 99999999)}"
 
