@@ -1560,6 +1560,8 @@ class SpiderFootDb:
         from spiderfoot.shared_infra import (
             COHOST_SHARED_THRESHOLD, SHARED_INFRA_TARGET_IP_RISK_TYPES)
 
+        placeholders = ",".join("?" * len(SHARED_INFRA_TARGET_IP_RISK_TYPES))
+        type_params = list(SHARED_INFRA_TARGET_IP_RISK_TYPES)
         with self.dbhLock:
             try:
                 self.dbh.execute(
@@ -1570,15 +1572,23 @@ class SpiderFootDb:
                 if cohosts < COHOST_SHARED_THRESHOLD:
                     return 0
 
-                placeholders = ",".join("?" * len(SHARED_INFRA_TARGET_IP_RISK_TYPES))
+                # Count the rows to be flagged explicitly rather than relying on
+                # cursor.rowcount, whose value after UPDATE is not consistent
+                # across SQLite versions.
                 self.dbh.execute(
-                    f"UPDATE tbl_scan_results SET false_positive = 1 \
+                    f"SELECT COUNT(*) FROM tbl_scan_results \
                       WHERE scan_instance_id = ? AND false_positive = 0 \
                       AND type IN ({placeholders})",
-                    [instanceId, *SHARED_INFRA_TARGET_IP_RISK_TYPES])
-                updated = self.dbh.rowcount
-                self.conn.commit()
-                return updated
+                    [instanceId, *type_params])
+                to_update = self.dbh.fetchone()[0]
+                if to_update:
+                    self.dbh.execute(
+                        f"UPDATE tbl_scan_results SET false_positive = 1 \
+                          WHERE scan_instance_id = ? AND false_positive = 0 \
+                          AND type IN ({placeholders})",
+                        [instanceId, *type_params])
+                    self.conn.commit()
+                return to_update
             except sqlite3.Error as e:
                 raise IOError("SQL error finalizing shared-infra suppression") from e
 
