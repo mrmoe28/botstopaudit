@@ -1,5 +1,21 @@
+import os
+
 import pytest
 from spiderfoot import SpiderFootHelpers
+
+
+def _test_db_path():
+    """Per-xdist-worker test database path.
+
+    Under `pytest -n auto` each worker gets its own SQLite file so that
+    concurrent schema migrations and writes don't race on a shared database.
+
+    Returns:
+        str: path to the (per-worker) test database file
+    """
+    worker = os.environ.get("PYTEST_XDIST_WORKER", "")
+    suffix = f".{worker}" if worker else ""
+    return f"{SpiderFootHelpers.dataPath()}/spiderfoot.test{suffix}.db"
 
 
 @pytest.fixture(autouse=True)
@@ -14,7 +30,7 @@ def default_options(request):
         '_internettlds': 'https://publicsuffix.org/list/effective_tld_names.dat',
         '_internettlds_cache': 72,
         '_genericusers': ",".join(SpiderFootHelpers.usernamesFromWordlists(['generic-usernames'])),
-        '__database': f"{SpiderFootHelpers.dataPath()}/spiderfoot.test.db",  # note: test database file
+        '__database': _test_db_path(),  # note: per-worker test database file
         '__modules__': None,  # List of modules. Will be set after start-up.
         '__correlationrules__': None,  # List of correlation rules. Will be set after start-up.
         '_socks1type': '',

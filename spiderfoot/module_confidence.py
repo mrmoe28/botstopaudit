@@ -158,7 +158,6 @@ MODULE_CONFIDENCE = {
     "sfp_hunter": 68,
     "sfp_snov": 65,
     "sfp_emailformat": 55,
-    "sfp_email": 72,
 
     # --- Brute Force / Speculative ---
     "sfp_dnsbrute": 55,

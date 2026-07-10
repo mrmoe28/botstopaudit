@@ -1,4 +1,5 @@
 # test_spiderfootwebui.py
+import cherrypy
 import pytest
 import unittest
 
@@ -10,6 +11,15 @@ class TestSpiderFootWebUi(unittest.TestCase):
     """
     Test SpiderFootWebUi
     """
+
+    def setUp(self):
+        # Handlers read/write cherrypy.session; provide a dict-backed session so
+        # unit tests can invoke them directly, outside a live request context.
+        cherrypy.session = {}
+
+    def tearDown(self):
+        if hasattr(cherrypy, "session"):
+            del cherrypy.session
 
     def test_init_config_invalid_type_should_raise_TypeError(self):
         """
