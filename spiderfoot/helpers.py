@@ -1579,3 +1579,40 @@ class SpiderFootHelpers():
         except ValueError:
             return False
         return any(addr in net for net in SpiderFootHelpers._cdn_networks())
+
+    # Shared registrar / managed-DNS / mail-routing provider domains. Blocklists
+    # routinely flag these because they serve many unrelated tenants, so a
+    # malicious/blacklisted flag on a host under one of them is almost always a
+    # false positive about the shared infrastructure, not the target. A hostname
+    # matches if it equals a domain or is a subdomain of it. This is a curated
+    # allowlist and expected to be extended over time.
+    _SHARED_INFRA_DOMAINS = frozenset((
+        # Namecheap (registrar, DNS, hosting, mail forwarding)
+        "registrar-servers.com", "namecheaphosting.com", "web-hosting.com",
+        # Microsoft 365 / Exchange Online Protection mail routing
+        "protection.outlook.com",
+        # GoDaddy managed DNS
+        "domaincontrol.com",
+        # NS1 managed DNS
+        "nsone.net",
+        # DNS Made Easy managed DNS
+        "dnsmadeeasy.com",
+    ))
+
+    @staticmethod
+    def isSharedInfraHost(host: str) -> bool:
+        """Return True if host belongs to a known shared registrar/DNS/mail provider.
+
+        Args:
+            host (str): hostname
+
+        Returns:
+            bool: True if host is (or is a subdomain of) a shared-infra domain
+        """
+        if not host:
+            return False
+        host = host.strip().lower().rstrip(".")
+        for domain in SpiderFootHelpers._SHARED_INFRA_DOMAINS:
+            if host == domain or host.endswith("." + domain):
+                return True
+        return False

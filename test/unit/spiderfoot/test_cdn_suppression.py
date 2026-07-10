@@ -41,6 +41,19 @@ class FakeTarget:
         self.targetType = ttype
 
 
+class FakeDb:
+    """Stand-in for the scan DB handle: serves PROVIDER_DNS/PROVIDER_MAIL."""
+
+    def __init__(self, providers=None):
+        # providers: dict of eventType -> list of hostnames
+        self._providers = providers or {}
+        self.calls = 0
+
+    def scanResultEventUnique(self, scanId, eventType="ALL", filterFp=False):
+        self.calls += 1
+        return [(h, eventType, 1) for h in self._providers.get(eventType, [])]
+
+
 class TestCDNSuppression(unittest.TestCase):
 
     def test_isKnownCDNIP_new_ranges(self):
@@ -96,7 +109,7 @@ class TestCDNSuppression(unittest.TestCase):
         src = SpiderFootEvent("IP_ADDRESS", "185.199.110.22", "sfp_dns", root)
         evt = SpiderFootEvent("MALICIOUS_IPADDR", "BadFeed [185.199.110.22]",
                               "sfp_x", src)
-        p._markCDNFalsePositive(evt)
+        p._markSharedInfraFalsePositive(evt)
         self.assertEqual(evt.false_positive, 1)
 
     def test_mark_cohost_on_github_pages(self):
@@ -109,18 +122,31 @@ class TestCDNSuppression(unittest.TestCase):
         evt = SpiderFootEvent("MALICIOUS_COHOST",
                               "CloudFlare - Malware [lumiere-mulagwa.github.io]",
                               "sfp_x", src)
-        p._markCDNFalsePositive(evt)
+        p._markSharedInfraFalsePositive(evt)
         self.assertEqual(evt.false_positive, 1)
 
-    def test_mark_affiliate_nameserver_not_flagged(self):
-        # A blacklisted affiliate that is a nameserver, not on a CDN -> kept.
+    def test_mark_affiliate_nameserver_flagged_via_shared_infra(self):
+        # A blacklisted registrar nameserver is shared infra -> flagged even
+        # without provider-DB context (matched by the shared-infra domain list).
         p = self._plugin(resolves={"dns2.registrar-servers.com": ["156.154.132.200"]})
         root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
         src = SpiderFootEvent("AFFILIATE_INTERNET_NAME",
                               "dns2.registrar-servers.com", "sfp_dns", root)
         evt = SpiderFootEvent("MALICIOUS_AFFILIATE_INTERNET_NAME",
                               "Quad9 [dns2.registrar-servers.com]", "sfp_x", src)
-        p._markCDNFalsePositive(evt)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 1)
+
+    def test_mark_ordinary_affiliate_not_flagged(self):
+        # A genuinely unrelated blacklisted affiliate (not shared infra, not
+        # a provider, not on a CDN) must be kept.
+        p = self._plugin(resolves={"evil-partner.example": ["198.51.100.7"]})
+        root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
+        src = SpiderFootEvent("AFFILIATE_INTERNET_NAME",
+                              "evil-partner.example", "sfp_dns", root)
+        evt = SpiderFootEvent("MALICIOUS_AFFILIATE_INTERNET_NAME",
+                              "Quad9 [evil-partner.example]", "sfp_x", src)
+        p._markSharedInfraFalsePositive(evt)
         self.assertEqual(evt.false_positive, 0)
 
     def test_mark_target_internet_name_on_cdn(self):
@@ -129,14 +155,14 @@ class TestCDNSuppression(unittest.TestCase):
         src = SpiderFootEvent("INTERNET_NAME", "cinecastpro.com", "sfp_dns", root)
         evt = SpiderFootEvent("MALICIOUS_INTERNET_NAME",
                               "Comodo Secure DNS [cinecastpro.com]", "sfp_x", src)
-        p._markCDNFalsePositive(evt)
+        p._markSharedInfraFalsePositive(evt)
         self.assertEqual(evt.false_positive, 1)
 
     def test_mark_non_risk_event_untouched(self):
         p = self._plugin(resolves={"cinecastpro.com": ["185.199.110.22"]})
         root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
         evt = SpiderFootEvent("INTERNET_NAME", "cinecastpro.com", "sfp_dns", root)
-        p._markCDNFalsePositive(evt)
+        p._markSharedInfraFalsePositive(evt)
         self.assertEqual(evt.false_positive, 0)
 
     def test_cohost_suppressed_via_target_on_cdn_even_if_cohost_unresolvable(self):
@@ -148,7 +174,7 @@ class TestCDNSuppression(unittest.TestCase):
         src = SpiderFootEvent("CO_HOSTED_SITE", "gone.example", "sfp_cohost", root)
         evt = SpiderFootEvent("MALICIOUS_COHOST", "Feed [gone.example]",
                               "sfp_x", src)
-        p._markCDNFalsePositive(evt)
+        p._markSharedInfraFalsePositive(evt)
         self.assertEqual(evt.false_positive, 1)
 
     def test_cohost_not_suppressed_when_target_off_cdn(self):
@@ -161,7 +187,7 @@ class TestCDNSuppression(unittest.TestCase):
                               "sfp_cohost", root)
         evt = SpiderFootEvent("MALICIOUS_COHOST", "Feed [badcohost.example]",
                               "sfp_x", src)
-        p._markCDNFalsePositive(evt)
+        p._markSharedInfraFalsePositive(evt)
         self.assertEqual(evt.false_positive, 0)
 
     def test_cohost_ip_target(self):
@@ -172,7 +198,7 @@ class TestCDNSuppression(unittest.TestCase):
         src = SpiderFootEvent("CO_HOSTED_SITE", "x.example", "sfp_cohost", root)
         evt = SpiderFootEvent("BLACKLISTED_COHOST", "Feed [x.example]",
                               "sfp_x", src)
-        p._markCDNFalsePositive(evt)
+        p._markSharedInfraFalsePositive(evt)
         self.assertEqual(evt.false_positive, 1)
 
     def test_targetOnCDN_cached(self):
@@ -184,6 +210,101 @@ class TestCDNSuppression(unittest.TestCase):
         self.assertTrue(p._targetOnCDN())
         self.assertTrue(p._targetOnCDN())
         self.assertEqual(sf.resolve_calls, 1)
+
+    def _plugin_with_db(self, providers, resolves=None):
+        p = self._plugin(resolves=resolves)
+        p.__sfdb__ = FakeDb(providers=providers)
+        p.__scanId__ = "SCAN1"
+        return p
+
+    def test_nameserver_flagged_as_provider_infra(self):
+        # dns2.registrar-servers.com is one of the target's nameservers ->
+        # a blacklist hit on it is shared registrar infra, suppress.
+        p = self._plugin_with_db(
+            providers={"PROVIDER_DNS": ["dns1.registrar-servers.com",
+                                         "dns2.registrar-servers.com"]},
+            resolves={"dns2.registrar-servers.com": ["156.154.132.200"]})
+        root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
+        src = SpiderFootEvent("AFFILIATE_INTERNET_NAME",
+                              "dns2.registrar-servers.com", "sfp_dns", root)
+        evt = SpiderFootEvent("MALICIOUS_AFFILIATE_INTERNET_NAME",
+                              "Quad9 [dns2.registrar-servers.com]", "sfp_x", src)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 1)
+
+    def test_mailforwarder_flagged_as_provider_infra(self):
+        p = self._plugin_with_db(
+            providers={"PROVIDER_MAIL": ["eforward1.registrar-servers.com"]},
+            resolves={"eforward1.registrar-servers.com": ["162.255.118.51"]})
+        root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
+        src = SpiderFootEvent("AFFILIATE_INTERNET_NAME",
+                              "eforward1.registrar-servers.com", "sfp_dns", root)
+        evt = SpiderFootEvent("BLACKLISTED_AFFILIATE_INTERNET_NAME",
+                              "Comodo [eforward1.registrar-servers.com]",
+                              "sfp_x", src)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 1)
+
+    def test_non_provider_affiliate_not_flagged(self):
+        # A blacklisted affiliate that is NOT a provider and not on a CDN.
+        p = self._plugin_with_db(
+            providers={"PROVIDER_DNS": ["dns1.registrar-servers.com"]},
+            resolves={"evil-partner.example": ["198.51.100.7"]})
+        root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
+        src = SpiderFootEvent("AFFILIATE_INTERNET_NAME",
+                              "evil-partner.example", "sfp_dns", root)
+        evt = SpiderFootEvent("MALICIOUS_AFFILIATE_INTERNET_NAME",
+                              "Quad9 [evil-partner.example]", "sfp_x", src)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 0)
+
+    def test_provider_set_cached(self):
+        p = self._plugin_with_db(
+            providers={"PROVIDER_DNS": ["dns1.registrar-servers.com"]})
+        db = p.__sfdb__
+        p._isProviderInfra("dns1.registrar-servers.com")
+        p._isProviderInfra("dns1.registrar-servers.com")
+        # 2 event types queried once total (cache holds after first populate).
+        self.assertEqual(db.calls, 2)
+
+    def test_isSharedInfraHost(self):
+        expected = {
+            "dns1.namecheaphosting.com": True,
+            "dns2.namecheaphosting.com": True,
+            "mail-bn6pr04cu00105.inbound.protection.outlook.com": True,
+            "github-com.mail.protection.outlook.com": True,
+            "registrar-servers.com": True,
+            "eforward1.registrar-servers.com": True,
+            "ns01.domaincontrol.com": True,
+            "dns1.p08.nsone.net": True,
+            "cinecastpro.com": False,
+            "evil-partner.example": False,
+            "": False,
+        }
+        for host, want in expected.items():
+            with self.subTest(host=host):
+                self.assertEqual(SpiderFootHelpers.isSharedInfraHost(host), want)
+
+    def test_namecheaphosting_ns_flagged_via_shared_infra_list(self):
+        # Not a tagged PROVIDER and not on a CDN, but a known shared-infra domain.
+        p = self._plugin(resolves={"dns1.namecheaphosting.com": ["162.255.119.1"]})
+        root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
+        src = SpiderFootEvent("AFFILIATE_INTERNET_NAME",
+                              "dns1.namecheaphosting.com", "sfp_dns", root)
+        evt = SpiderFootEvent("MALICIOUS_AFFILIATE_INTERNET_NAME",
+                              "Quad9 [dns1.namecheaphosting.com]", "sfp_x", src)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 1)
+
+    def test_outlook_mail_pool_flagged_via_shared_infra_list(self):
+        host = "mail-bn6pr04cu00105.inbound.protection.outlook.com"
+        p = self._plugin(resolves={host: ["52.101.0.1"]})
+        root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
+        src = SpiderFootEvent("AFFILIATE_INTERNET_NAME", host, "sfp_dns", root)
+        evt = SpiderFootEvent("BLACKLISTED_AFFILIATE_INTERNET_NAME",
+                              f"CleanBrowsing [{host}]", "sfp_x", src)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 1)
 
     def test_false_positive_excluded_from_exposure_score(self):
         fd, path = tempfile.mkstemp(suffix=".db")

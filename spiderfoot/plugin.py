@@ -166,6 +166,9 @@ class SpiderFootPlugin():
         # Cached per-module answer to "does the scan target sit on a CDN?"
         # (None = not yet computed). The target doesn't change during a scan.
         self._targetOnCDNCache = None
+        # Cached set of the scan's DNS/mail provider hostnames (None = not yet
+        # loaded, empty set = loaded-but-none-stored-yet, so keep retrying).
+        self._providerHostCache = None
 
     @property
     def log(self):
@@ -414,16 +417,61 @@ class SpiderFootPlugin():
         self._targetOnCDNCache = result
         return result
 
-    def _markCDNFalsePositive(self, sfEvent) -> None:
-        """Flag CDN/shared-infrastructure false positives on a malicious event.
+    def _loadProviderHosts(self) -> set:
+        """Load the scan's DNS/mail provider hostnames from the database.
 
-        Threat intel feeds routinely flag shared CDN/edge IPs (Cloudflare,
-        Fastly, Akamai, CloudFront, GitHub Pages, Vercel, Netlify) because
-        *other* tenants on those IPs were malicious, not the target. On shared
-        infrastructure the whole co-hosted/affiliate relationship is
-        meaningless, so any such finding that resolves into a known CDN range is
-        a false positive. Setting false_positive=1 excludes it from the exposure
-        score and hides it in the UI.
+        Returns:
+            set: lowercased PROVIDER_DNS / PROVIDER_MAIL hostnames (possibly
+                empty if none have been stored yet).
+        """
+        hosts = set()
+        try:
+            if self.__sfdb__ is not None and self.__scanId__:
+                for etype in ("PROVIDER_DNS", "PROVIDER_MAIL"):
+                    for row in self.__sfdb__.scanResultEventUnique(
+                            self.__scanId__, etype):
+                        if row and row[0]:
+                            hosts.add(row[0].strip().lower())
+        except Exception:
+            pass
+        return hosts
+
+    def _isProviderInfra(self, host: str) -> bool:
+        """Return True if host is one of the target's DNS/mail providers.
+
+        A blacklist/malicious flag on the target's own nameserver or
+        mail-forwarder is shared-infrastructure noise (that infra serves many
+        unrelated domains), not a threat to the target. The provider set is
+        cached per module; while it is still empty it is reloaded on demand,
+        since provider events may not be stored when the first flag fires.
+
+        Args:
+            host (str): hostname to check
+
+        Returns:
+            bool: True if host is a known DNS/mail provider for this scan
+        """
+        if not host:
+            return False
+        if not self._providerHostCache:
+            self._providerHostCache = self._loadProviderHosts()
+        return host in self._providerHostCache
+
+    def _markSharedInfraFalsePositive(self, sfEvent) -> None:
+        """Flag shared-infrastructure false positives on a malicious event.
+
+        Two shared-infrastructure patterns are suppressed:
+
+        1. CDN/edge IPs (Cloudflare, Fastly, Akamai, CloudFront, GitHub Pages,
+           Vercel, Netlify): threat-intel feeds flag them because of *other*
+           tenants, and on shared IPs the co-host/affiliate relationship is
+           meaningless.
+        2. The target's own DNS/mail providers (nameservers, mail forwarders):
+           blocklists routinely flag shared registrar/mail infrastructure that
+           serves many unrelated domains.
+
+        Setting false_positive=1 excludes the finding from the exposure score
+        and hides it in the UI.
 
         For IP-typed events the IP is taken from the source (or own) data.
         Co-host events are judged by the *target's* IP (the co-host relationship
@@ -455,7 +503,10 @@ class SpiderFootPlugin():
                     self._extractHost(sfEvent)):
                 sfEvent.false_positive = 1
         elif etype in self._CDN_FP_NAME_TYPES:
-            if self._cdnHostIsFalsePositive(self._extractHost(sfEvent)):
+            host = self._extractHost(sfEvent)
+            if (self._cdnHostIsFalsePositive(host)
+                    or self._isProviderInfra(host)
+                    or SpiderFootHelpers.isSharedInfraHost(host)):
                 sfEvent.false_positive = 1
 
     @staticmethod
@@ -498,7 +549,7 @@ class SpiderFootPlugin():
             if module_conf != 100:
                 sfEvent.confidence = module_conf
 
-        self._markCDNFalsePositive(sfEvent)
+        self._markSharedInfraFalsePositive(sfEvent)
 
         eventName = sfEvent.eventType
         eventData = sfEvent.data
