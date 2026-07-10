@@ -20,7 +20,7 @@ COPY --from=trufflehog-src /usr/bin/trufflehog /usr/local/bin/trufflehog
 
 RUN git clone --depth 1 https://github.com/urbanadventurer/WhatWeb /tools/WhatWeb \
     && gem install rchardet mongo \
-    && cd /tools/WhatWeb && bundle install --without test
+    && cd /tools/WhatWeb && bundle install --without test --retry 5
 
 RUN npm install -g retire
 
