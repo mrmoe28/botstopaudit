@@ -9,6 +9,7 @@ import threading
 from time import sleep
 import traceback
 
+from .shared_infra import COHOST_SHARED_THRESHOLD
 from .threadpool import SpiderFootThreadPool
 
 # begin logging overrides
@@ -152,8 +153,8 @@ class SpiderFootPlugin():
     # mirrors the co-host modules' own "maxcohost" heuristic ("...as it would
     # likely indicate web hosting"). Set conservatively high so it only fires on
     # a strong shared-infra signal and never suppresses a genuinely dedicated
-    # target's findings.
-    _COHOST_SHARED_THRESHOLD = 20
+    # target's findings. Threshold is shared with the end-of-scan re-evaluation.
+    _COHOST_SHARED_THRESHOLD = COHOST_SHARED_THRESHOLD
     # Name findings are about the named host itself; judge them by that host's
     # own resolution.
     _CDN_FP_NAME_TYPES = frozenset((

@@ -420,6 +420,17 @@ class SpiderFootScanner():
 
         finally:
             if not failed:
+                # Re-evaluate shared-infrastructure false positives now that all
+                # co-hosts are known (some risk findings, e.g. MALICIOUS_IPADDR,
+                # fire before co-host enumeration completes).
+                try:
+                    suppressed = self.__dbh.scanFinalizeSharedInfra(self.__scanId)
+                    if suppressed:
+                        self.__sf.status(
+                            f"Suppressed {suppressed} shared-infrastructure "
+                            f"false positive(s) for scan [{self.__scanId}].")
+                except Exception as e:
+                    self.__sf.error(f"Shared-infra finalization failed: {e}")
                 self.__setStatus("FINISHED", None, time.time() * 1000)
                 self.runCorrelations()
                 self.__sf.status(f"Scan [{self.__scanId}] completed.")

@@ -395,6 +395,70 @@ class TestCDNSuppression(unittest.TestCase):
             if os.path.exists(path):
                 os.unlink(path)
 
+    def _finalize_fixture(self, num_cohosts):
+        """Build a temp DB scan with num_cohosts co-hosts + IP risk findings."""
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        os.unlink(path)
+        opts = {"__database": path, "__dbtype": "sqlite"}
+        db = SpiderFootDb(opts, init=True)
+        scan_id = "FINALIZE01"
+        db.scanInstanceCreate(scan_id, "finalize-test", "example.com")
+        root = SpiderFootEvent("ROOT", "example.com", "", None)
+        db.scanEventStore(scan_id, root)
+        ip = SpiderFootEvent("IP_ADDRESS", "203.0.113.7", "sfp_dns", root)
+        db.scanEventStore(scan_id, ip)
+        for i in range(num_cohosts):
+            ch = SpiderFootEvent("CO_HOSTED_SITE", f"neighbor{i}.example",
+                                 "sfp_cohost", ip)
+            db.scanEventStore(scan_id, ch)
+        # Target's own malicious IP (should be suppressed only when shared).
+        mip = SpiderFootEvent("MALICIOUS_IPADDR", "BadFeed [203.0.113.7]",
+                              "sfp_x", ip)
+        mip.confidence = 100
+        db.scanEventStore(scan_id, mip)
+        # Affiliate malicious IP (different entity — never suppressed by this).
+        aff_ip = SpiderFootEvent("AFFILIATE_IPADDR", "198.51.100.4", "sfp_dns", root)
+        db.scanEventStore(scan_id, aff_ip)
+        amip = SpiderFootEvent("MALICIOUS_AFFILIATE_IPADDR",
+                               "BadFeed [198.51.100.4]", "sfp_x", aff_ip)
+        amip.confidence = 100
+        db.scanEventStore(scan_id, amip)
+        return db, scan_id, path
+
+    def _fp_of(self, db, scan_id, like):
+        db.dbh.execute(
+            "SELECT false_positive FROM tbl_scan_results "
+            "WHERE scan_instance_id = ? AND data LIKE ?", [scan_id, like])
+        return db.dbh.fetchone()[0]
+
+    def test_finalize_suppresses_target_ip_when_shared(self):
+        db, scan_id, path = self._finalize_fixture(num_cohosts=25)
+        try:
+            updated = db.scanFinalizeSharedInfra(scan_id)
+            self.assertGreaterEqual(updated, 1)
+            # Target's own malicious IP suppressed...
+            self.assertEqual(self._fp_of(db, scan_id, "%203.0.113.7%"), 1)
+            # ...but the affiliate's malicious IP is left intact.
+            self.assertEqual(self._fp_of(db, scan_id, "%198.51.100.4%"), 0)
+            # MALICIOUS_IPADDR (weight 90) excluded; only the affiliate remains.
+            # Exposure reflects the surviving affiliate finding, not the target IP.
+            self.assertLess(db.scanExposureScore(scan_id), 90)
+        finally:
+            if os.path.exists(path):
+                os.unlink(path)
+
+    def test_finalize_keeps_target_ip_when_dedicated(self):
+        db, scan_id, path = self._finalize_fixture(num_cohosts=3)
+        try:
+            updated = db.scanFinalizeSharedInfra(scan_id)
+            self.assertEqual(updated, 0)
+            # Dedicated target: real malicious IP finding preserved.
+            self.assertEqual(self._fp_of(db, scan_id, "%203.0.113.7%"), 0)
+        finally:
+            if os.path.exists(path):
+                os.unlink(path)
+
 
 if __name__ == "__main__":
     unittest.main()
