@@ -396,7 +396,14 @@ class TestCDNSuppression(unittest.TestCase):
                 os.unlink(path)
 
     def _finalize_fixture(self, num_cohosts):
-        """Build a temp DB scan with num_cohosts co-hosts + IP risk findings."""
+        """Build a temp DB scan with co-hosts and target/affiliate IP findings.
+
+        Args:
+            num_cohosts (int): number of distinct co-hosted sites to store
+
+        Returns:
+            tuple: (SpiderFootDb, scan_id, db_path)
+        """
         fd, path = tempfile.mkstemp(suffix=".db")
         os.close(fd)
         os.unlink(path)
