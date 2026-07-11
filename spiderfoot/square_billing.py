@@ -1,5 +1,8 @@
 import os
 import uuid
+import hmac
+import base64
+import hashlib
 import urllib.request
 import urllib.error
 import json
@@ -11,6 +14,48 @@ PLAN_IDS = {
     "professional": os.environ.get("SQUARE_PLAN_PROFESSIONAL", ""),
     "agency": os.environ.get("SQUARE_PLAN_AGENCY", ""),
 }
+WEBHOOK_SIGNATURE_KEY = os.environ.get("SQUARE_WEBHOOK_SIGNATURE_KEY", "")
+WEBHOOK_URL = os.environ.get("SQUARE_WEBHOOK_URL", "")
+
+# Square subscription statuses that still entitle a user to their paid plan.
+ACTIVE_SUB_STATUSES = ("ACTIVE", "PENDING")
+
+
+def verify_webhook_signature(signature: str, body: bytes, notification_url: str = None) -> bool:
+    """Verify a Square webhook via HMAC-SHA256 over (notification_url + body).
+
+    Fails closed: if the signature key or notification URL is not configured, or
+    the signature is missing, verification fails so unverified events are ignored.
+
+    Args:
+        signature (str): value of the x-square-hmacsha256-signature header
+        body (bytes): raw request body bytes
+        notification_url (str): configured notification URL (defaults to env)
+
+    Returns:
+        bool: True if the signature is valid
+    """
+    key = WEBHOOK_SIGNATURE_KEY
+    url = notification_url or WEBHOOK_URL
+    if not key or not url or not signature:
+        return False
+    if isinstance(body, str):
+        body = body.encode()
+    digest = hmac.new(key.encode(), url.encode() + body, hashlib.sha256).digest()
+    expected = base64.b64encode(digest).decode()
+    return hmac.compare_digest(expected, signature)
+
+
+def subscription_active(status: str) -> bool:
+    """Return True if a Square subscription status still grants entitlement.
+
+    Args:
+        status (str): Square subscription status (e.g. ACTIVE, CANCELED)
+
+    Returns:
+        bool: True if the status is one that keeps the plan active
+    """
+    return (status or "").upper() in ACTIVE_SUB_STATUSES
 
 
 def _request(method: str, path: str, body: dict = None) -> dict:

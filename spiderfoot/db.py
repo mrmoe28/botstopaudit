@@ -2058,7 +2058,42 @@ class SpiderFootDb:
         return {'id': row[0], 'email': row[1], 'name': row[2],
                 'google_sub': row[3], 'avatar_url': row[4], 'password_hash': row[5],
                 'role': row[6], 'plan': row[7] or 'free',
-                'scan_count': row[8] or 0,
+                'scan_count': int(row[8] or 0),
+                'sq_customer_id': row[9], 'sq_subscription_id': row[10]}
+
+    def userGetBySquareId(self, subscription_id: str = None, customer_id: str = None) -> dict:
+        """Look up a user by Square subscription id (preferred) or customer id.
+
+        Used by the Square webhook to find whose plan to change when a
+        subscription is cancelled, deactivated, or lapses.
+
+        Args:
+            subscription_id (str): Square subscription id
+            customer_id (str): Square customer id (fallback)
+
+        Returns:
+            dict: user record, or None if not found
+        """
+        base = ("SELECT id, email, name, google_sub, avatar_url, password_hash, role, "
+                "plan, scan_count, sq_customer_id, sq_subscription_id "
+                "FROM tbl_users WHERE ")
+        if subscription_id:
+            qry, val = base + "sq_subscription_id = ?", subscription_id
+        elif customer_id:
+            qry, val = base + "sq_customer_id = ?", customer_id
+        else:
+            return None
+        with self.dbhLock:
+            try:
+                self.dbh.execute(qry, (val,))
+                row = self.dbh.fetchone()
+            except sqlite3.Error:
+                return None
+        if not row:
+            return None
+        return {'id': row[0], 'email': row[1], 'name': row[2],
+                'google_sub': row[3], 'avatar_url': row[4], 'password_hash': row[5],
+                'role': row[6], 'plan': row[7] or 'free', 'scan_count': int(row[8] or 0),
                 'sq_customer_id': row[9], 'sq_subscription_id': row[10]}
 
     def userUpdatePlan(self, user_id: str, plan: str, sq_customer_id: str, sq_subscription_id: str) -> None:

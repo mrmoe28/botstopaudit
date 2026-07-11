@@ -43,6 +43,11 @@ import spiderfoot.square_billing as square_billing
 
 mp.set_start_method("spawn", force=True)
 
+# Billing/plan enforcement. Free users get a fixed lifetime scan allowance;
+# paid plans are unlimited but only while they hold an active subscription.
+FREE_SCAN_LIMIT = 1
+PAID_PLANS = ('professional', 'agency')
+
 
 class SpiderFootWebUi:
     """SpiderFoot web interface."""
@@ -280,6 +285,72 @@ class SpiderFootWebUi:
             scan_id = scan_id.strip()
             if scan_id:
                 self._assertScanOwner(scan_id)
+
+    @staticmethod
+    def _userIsEntitled(db_user: dict) -> bool:
+        """Return True if the user may run unlimited scans.
+
+        Entitlement requires a paid plan AND an active subscription id. A paid
+        plan whose subscription was cancelled or lapsed (so sq_subscription_id is
+        cleared) is treated as unentitled, i.e. subject to the free limit.
+
+        Args:
+            db_user (dict): user record from SpiderFootDb.userGetById
+
+        Returns:
+            bool: True if the user is entitled to unlimited scans
+        """
+        if not db_user:
+            return False
+        return db_user.get('plan') in PAID_PLANS and bool(db_user.get('sq_subscription_id'))
+
+    def _scanQuotaExceeded(self: 'SpiderFootWebUi', session_user: dict) -> bool:
+        """Return True if the session user has exhausted their scan allowance.
+
+        Unauthenticated/CLI/legacy contexts (no user id) are never limited.
+
+        Args:
+            session_user (dict): cherrypy.session['user'] (may be empty)
+
+        Returns:
+            bool: True if the user is over their plan's scan quota
+        """
+        uid = (session_user or {}).get('id')
+        if not uid:
+            return False
+        db_user = self.__db.userGetById(uid) or {}
+        if self._userIsEntitled(db_user):
+            return False
+        return db_user.get('scan_count', 0) >= FREE_SCAN_LIMIT
+
+    def _scanQuotaError(self: 'SpiderFootWebUi'):
+        """Produce the over-quota response: JSON for API callers, redirect for browsers.
+
+        Returns:
+            bytes: JSON error payload when the client accepts application/json
+
+        Raises:
+            cherrypy.HTTPRedirect: redirect to the upgrade page for browser clients
+        """
+        upgrade_url = self.docroot + '/subscribe?plan=professional'
+        accept = cherrypy.request.headers.get('Accept', '') if hasattr(cherrypy, 'request') else ''
+        if accept and 'application/json' in accept:
+            cherrypy.response.headers['Content-Type'] = "application/json; charset=utf-8"
+            return json.dumps(["ERROR", f"Free plan limit reached. Upgrade at {upgrade_url}"]).encode('utf-8')
+        raise cherrypy.HTTPRedirect(upgrade_url)
+
+    def _consumeScan(self: 'SpiderFootWebUi', session_user: dict) -> None:
+        """Record that the session user has consumed one scan.
+
+        Called only after a scan has actually been launched so a failed launch
+        does not count against the user's allowance.
+
+        Args:
+            session_user (dict): cherrypy.session['user'] (may be empty)
+        """
+        uid = (session_user or {}).get('id')
+        if uid:
+            self.__db.userIncrementScanCount(uid)
 
     def searchBase(self: 'SpiderFootWebUi', id: str = None, eventType: str = None, value: str = None) -> list:
         """Search.
@@ -886,6 +957,9 @@ class SpiderFootWebUi:
         cfg = deepcopy(self.config)
         modlist = list()
         self._assertScanOwner(id)
+        session_user = cherrypy.session.get('user', {})
+        if self._scanQuotaExceeded(session_user):
+            return self._scanQuotaError()
         dbh = SpiderFootDb(cfg)
         info = dbh.scanInstanceGet(id)
 
@@ -933,6 +1007,9 @@ class SpiderFootWebUi:
         if user.get('id'):
             dbh.scanInstanceSetUser(scanId, user['id'])
 
+        # The re-run launched successfully; count it against the user's allowance.
+        self._consumeScan(user)
+
         raise cherrypy.HTTPRedirect(f"{self.docroot}/scaninfo?id={scanId}", status=302)
 
     @cherrypy.expose
@@ -951,6 +1028,10 @@ class SpiderFootWebUi:
         dbh = SpiderFootDb(cfg)
 
         self._assertScanOwnerMulti(ids)
+
+        session_user = cherrypy.session.get('user', {})
+        if self._scanQuotaExceeded(session_user):
+            return self._scanQuotaError()
 
         for id in ids.split(","):
             info = dbh.scanInstanceGet(id)
@@ -993,6 +1074,9 @@ class SpiderFootWebUi:
             user = cherrypy.session.get('user', {})
             if user.get('id'):
                 dbh.scanInstanceSetUser(scanId, user['id'])
+
+            # Count each successfully re-launched scan against the allowance.
+            self._consumeScan(user)
 
         templ = Template(filename='spiderfoot/templates/scanlist.tmpl', lookup=self.lookup)
         return templ.render(rerunscans=True, docroot=self.docroot, pageid="SCANLIST", version=__version__)
@@ -1285,6 +1369,53 @@ class SpiderFootWebUi:
             self.__db.userUpdatePlan(user['id'], 'free', db_user.get('sq_customer_id', ''), '')
             cherrypy.session['user'] = dict(user, plan='free')
         return {'ok': ok}
+
+    @cherrypy.expose
+    def square_webhook(self: 'SpiderFootWebUi') -> str:
+        """Square subscription webhook: downgrade users whose subscription lapses.
+
+        Verifies the Square HMAC-SHA256 signature, then for any subscription
+        event whose status is no longer active (cancelled, deactivated, paused,
+        past-due) downgrades the matching user to the free plan. This closes the
+        gap where a subscription cancelled or unpaid outside the app would leave
+        the user on a paid plan indefinitely.
+
+        Returns:
+            str: short status string
+        """
+        if cherrypy.request.method != 'POST':
+            cherrypy.response.status = 405
+            return 'method not allowed'
+
+        raw = cherrypy.request.body.read() or b''
+        signature = cherrypy.request.headers.get('x-square-hmacsha256-signature', '')
+        if not square_billing.verify_webhook_signature(signature, raw):
+            cherrypy.response.status = 401
+            return 'invalid signature'
+
+        try:
+            event = json.loads(raw)
+        except Exception:
+            cherrypy.response.status = 400
+            return 'invalid payload'
+
+        subscription = (event.get('data', {}).get('object', {}).get('subscription', {})) or {}
+        status = subscription.get('status', '')
+        sub_id = subscription.get('id', '')
+        customer_id = subscription.get('customer_id', '')
+
+        # Only act on subscription events that revoke entitlement.
+        if subscription and not square_billing.subscription_active(status):
+            db_user = self.__db.userGetBySquareId(subscription_id=sub_id, customer_id=customer_id)
+            if db_user and db_user.get('plan') in PAID_PLANS:
+                self.__db.userUpdatePlan(db_user['id'], 'free', db_user.get('sq_customer_id', ''), '')
+                self.log.info(
+                    f"Downgraded user {db_user['id']} to free "
+                    f"(subscription {sub_id} status {status}).")
+
+        return 'ok'
+
+    square_webhook._cp_config = {'tools.check_auth.on': False}
 
     @cherrypy.expose
     def scans(self: 'SpiderFootWebUi') -> str:
@@ -1755,19 +1886,11 @@ class SpiderFootWebUi:
 
             return self.error("Invalid target type. Could not recognize it as a target BotStop Audit supports.")
 
-        # Enforce plan limits: free users get 1 scan lifetime
+        # Enforce plan limits before launching (scan_count is consumed only
+        # once the scan actually starts, below).
         session_user = cherrypy.session.get('user', {})
-        if session_user.get('id'):
-            db_user = self.__db.userGetById(session_user['id']) or {}
-            plan = db_user.get('plan', 'free')
-            scan_count = db_user.get('scan_count', 0)
-            if plan == 'free' and scan_count >= 1:
-                upgrade_url = self.docroot + '/subscribe?plan=professional'
-                if cherrypy.request.headers.get('Accept') and 'application/json' in cherrypy.request.headers.get('Accept'):
-                    cherrypy.response.headers['Content-Type'] = "application/json; charset=utf-8"
-                    return json.dumps(["ERROR", f"Free plan limit reached. Upgrade at {upgrade_url}"]).encode('utf-8')
-                raise cherrypy.HTTPRedirect(upgrade_url)
-            self.__db.userIncrementScanCount(session_user['id'])
+        if self._scanQuotaExceeded(session_user):
+            return self._scanQuotaError()
 
         # Swap the globalscantable for the database handler
         dbh = SpiderFootDb(self.config)
@@ -1847,6 +1970,9 @@ class SpiderFootWebUi:
         while dbh.scanInstanceGet(scanId) is None:
             self.log.info("Waiting for the scan to initialize...")
             time.sleep(1)
+
+        # The scan launched successfully; count it against the user's allowance.
+        self._consumeScan(session_user)
 
         if cherrypy.request.headers.get('Accept') and 'application/json' in cherrypy.request.headers.get('Accept'):
             cherrypy.response.headers['Content-Type'] = "application/json; charset=utf-8"
