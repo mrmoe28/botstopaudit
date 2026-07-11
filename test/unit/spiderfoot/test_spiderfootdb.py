@@ -200,6 +200,48 @@ class TestSpiderFootDb(unittest.TestCase):
 
         self.assertEqual('TBD', 'TBD')
 
+    def test_scanInstanceOwner_should_return_owning_user_id(self):
+        """scanInstanceCreate with user_id should be readable via scanInstanceOwner."""
+        sfdb = SpiderFootDb(self.default_options, False)
+
+        instance_id = "owned-scan-instance-id"
+        sfdb.scanInstanceCreate(instance_id, "owned scan", "target", user_id="user-123")
+
+        self.assertEqual("user-123", sfdb.scanInstanceOwner(instance_id))
+
+    def test_scanInstanceOwner_unowned_scan_should_return_empty_string(self):
+        """A scan created without a user_id has no owner."""
+        sfdb = SpiderFootDb(self.default_options, False)
+
+        instance_id = "unowned-scan-instance-id"
+        sfdb.scanInstanceCreate(instance_id, "unowned scan", "target")
+
+        self.assertEqual("", sfdb.scanInstanceOwner(instance_id))
+
+    def test_scanInstanceOwner_unknown_scan_should_return_empty_string(self):
+        """Owner of a non-existent scan is empty (not an error)."""
+        sfdb = SpiderFootDb(self.default_options, False)
+
+        self.assertEqual("", sfdb.scanInstanceOwner("does-not-exist"))
+
+    def test_scanInstanceOwner_invalid_id_should_return_empty_string(self):
+        """Owner lookup with an invalid id type returns empty rather than raising."""
+        sfdb = SpiderFootDb(self.default_options, False)
+
+        self.assertEqual("", sfdb.scanInstanceOwner(None))
+        self.assertEqual("", sfdb.scanInstanceOwner(""))
+
+    def test_scanInstanceSetUser_should_update_owner(self):
+        """scanInstanceSetUser should change the owning user_id."""
+        sfdb = SpiderFootDb(self.default_options, False)
+
+        instance_id = "reassign-scan-instance-id"
+        sfdb.scanInstanceCreate(instance_id, "reassign scan", "target")
+        self.assertEqual("", sfdb.scanInstanceOwner(instance_id))
+
+        sfdb.scanInstanceSetUser(instance_id, "user-456")
+        self.assertEqual("user-456", sfdb.scanInstanceOwner(instance_id))
+
     @unittest.skip("todo")
     def test_scanInstanceCreate_argument_instanceId_already_exists_should_halt_and_catch_fire(self):
         """

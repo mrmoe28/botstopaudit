@@ -801,6 +801,31 @@ class SpiderFootDb:
             except sqlite3.Error as e:
                 raise IOError("SQL error encountered when retrieving scan instance") from e
 
+    def scanInstanceOwner(self, instanceId: str) -> str:
+        """Return the user_id that owns a scan, or '' if unowned/unknown.
+
+        Used to enforce per-user access control on scan-scoped endpoints.
+
+        Args:
+            instanceId (str): scan instance ID
+
+        Returns:
+            str: owning user_id, or '' when the scan has no owner or is not found
+        """
+        if not isinstance(instanceId, str) or not instanceId:
+            return ""
+        with self.dbhLock:
+            try:
+                self.dbh.execute(
+                    "SELECT user_id FROM tbl_scan_instance WHERE guid = ?",
+                    [instanceId])
+                row = self.dbh.fetchone()
+            except sqlite3.Error:
+                return ""
+        if not row or row[0] is None:
+            return ""
+        return str(row[0])
+
     def scanResultSummary(self, instanceId: str, by: str = "type", filterFp: bool = True) -> list:
         """Obtain a summary of the results, filtered by event type, module or entity.
 

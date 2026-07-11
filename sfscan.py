@@ -74,6 +74,9 @@ class SpiderFootScanner():
             raise ValueError("globalOpts is empty")
 
         self.__config = deepcopy(globalOpts)
+        # Owning user id, injected by the web UI (None for CLI scans). Popped so
+        # it never leaks into module config or stored scan settings.
+        self.__scanUser = self.__config.pop('__scanuser__', None)
         self.__dbh = SpiderFootDb(self.__config)
 
         if not isinstance(scanName, str):
@@ -118,7 +121,7 @@ class SpiderFootScanner():
             self.__scanId = SpiderFootHelpers.genScanInstanceId()
 
         self.__sf.scanId = self.__scanId
-        self.__dbh.scanInstanceCreate(self.__scanId, self.__scanName, self.__targetValue)
+        self.__dbh.scanInstanceCreate(self.__scanId, self.__scanName, self.__targetValue, user_id=self.__scanUser)
 
         # Create our target
         try:

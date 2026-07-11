@@ -101,6 +101,67 @@ class TestSpiderFootWebUi(unittest.TestCase):
                 with self.assertRaises(TypeError):
                     sfwebui.cleanUserInput(invalid_type)
 
+    def test_may_access_scan_tenant_isolation_matrix(self):
+        """_mayAccessScan enforces per-tenant isolation."""
+        owner = {'id': 'user-1', 'role': 'user'}
+        other = {'id': 'user-2', 'role': 'user'}
+        admin = {'id': 'admin-1', 'role': 'admin'}
+
+        # Unowned (CLI/legacy) scans are not tenant data → always accessible.
+        self.assertTrue(SpiderFootWebUi._mayAccessScan(owner, ""))
+        self.assertTrue(SpiderFootWebUi._mayAccessScan({}, ""))
+        self.assertTrue(SpiderFootWebUi._mayAccessScan(None, ""))
+
+        # Owner may access their own scan; a different user may not.
+        self.assertTrue(SpiderFootWebUi._mayAccessScan(owner, "user-1"))
+        self.assertFalse(SpiderFootWebUi._mayAccessScan(other, "user-1"))
+
+        # Admin may access any owned scan.
+        self.assertTrue(SpiderFootWebUi._mayAccessScan(admin, "user-1"))
+
+        # Anonymous/no session may not access an owned scan.
+        self.assertFalse(SpiderFootWebUi._mayAccessScan({}, "user-1"))
+        self.assertFalse(SpiderFootWebUi._mayAccessScan(None, "user-1"))
+
+    def test_assert_scan_owner_denies_other_tenant(self):
+        """_assertScanOwner raises 403 when a user requests another tenant's scan."""
+        opts = self.default_options
+        opts['__modules__'] = dict()
+        sfwebui = SpiderFootWebUi(self.web_default_options, opts)
+
+        from spiderfoot import SpiderFootDb
+        dbh = SpiderFootDb(opts, False)
+        scan_id = "isolation-test-scan"
+        dbh.scanInstanceCreate(scan_id, "owned", "target", user_id="owner-user")
+
+        # A different user is denied.
+        cherrypy.session = {'user': {'id': 'attacker', 'role': 'user'}}
+        with self.assertRaises(cherrypy.HTTPError) as ctx:
+            sfwebui._assertScanOwner(scan_id)
+        self.assertEqual(403, ctx.exception.status)
+
+        # The owner is allowed (no exception).
+        cherrypy.session = {'user': {'id': 'owner-user', 'role': 'user'}}
+        sfwebui._assertScanOwner(scan_id)
+
+        # An admin is allowed.
+        cherrypy.session = {'user': {'id': 'someone', 'role': 'admin'}}
+        sfwebui._assertScanOwner(scan_id)
+
+    def test_assert_scan_owner_allows_unowned_scan(self):
+        """Unowned (legacy/CLI) scans remain accessible to any session."""
+        opts = self.default_options
+        opts['__modules__'] = dict()
+        sfwebui = SpiderFootWebUi(self.web_default_options, opts)
+
+        from spiderfoot import SpiderFootDb
+        dbh = SpiderFootDb(opts, False)
+        scan_id = "isolation-test-unowned"
+        dbh.scanInstanceCreate(scan_id, "unowned", "target")
+
+        cherrypy.session = {'user': {'id': 'anyone', 'role': 'user'}}
+        sfwebui._assertScanOwner(scan_id)  # must not raise
+
     def test_clean_user_input_should_clean_user_input(self):
         opts = self.default_options
         opts['__modules__'] = dict()

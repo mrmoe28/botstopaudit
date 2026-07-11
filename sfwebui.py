@@ -225,6 +225,62 @@ class SpiderFootWebUi:
 
         return ret
 
+    @staticmethod
+    def _mayAccessScan(user: dict, scan_owner: str) -> bool:
+        """Decide whether the session user may access a scan owned by scan_owner.
+
+        Rules:
+          * Unowned scans (no user_id — CLI/legacy) are not tenant data → allowed.
+          * Admins may access any scan.
+          * Otherwise the scan's owner must match the logged-in user's id.
+
+        Args:
+            user (dict): the logged-in user (cherrypy.session['user']), or {}
+            scan_owner (str): the scan's owning user_id ('' if unowned)
+
+        Returns:
+            bool: True if access is permitted
+        """
+        if not scan_owner:
+            return True
+        if not user:
+            return False
+        if user.get('role') == 'admin':
+            return True
+        return scan_owner == user.get('id')
+
+    def _assertScanOwner(self: 'SpiderFootWebUi', scan_id: str) -> None:
+        """Raise 403 unless the logged-in user may access the given scan.
+
+        Enforces per-user isolation on scan-scoped endpoints so an authenticated
+        user cannot read or modify another user's scans by supplying its id.
+
+        Args:
+            scan_id (str): scan instance ID
+
+        Raises:
+            cherrypy.HTTPError: 403 if access is denied
+        """
+        dbh = SpiderFootDb(self.config)
+        owner = dbh.scanInstanceOwner(scan_id)
+        user = cherrypy.session.get('user', {}) if hasattr(cherrypy, 'session') else {}
+        if not self._mayAccessScan(user, owner):
+            raise cherrypy.HTTPError(403, "You do not have access to this scan.")
+
+    def _assertScanOwnerMulti(self: 'SpiderFootWebUi', ids: str) -> None:
+        """Assert ownership for a comma-separated list of scan ids.
+
+        Args:
+            ids (str): comma-separated scan instance IDs
+
+        Raises:
+            cherrypy.HTTPError: 403 if access to any scan is denied
+        """
+        for scan_id in str(ids or "").split(','):
+            scan_id = scan_id.strip()
+            if scan_id:
+                self._assertScanOwner(scan_id)
+
     def searchBase(self: 'SpiderFootWebUi', id: str = None, eventType: str = None, value: str = None) -> list:
         """Search.
 
@@ -240,6 +296,14 @@ class SpiderFootWebUi:
 
         if not id and not eventType and not value:
             return retdata
+
+        if id:
+            self._assertScanOwner(id)
+        else:
+            user = cherrypy.session.get('user', {}) if hasattr(cherrypy, 'session') else {}
+            if user and user.get('role') != 'admin':
+                # A cross-scan search (no scan id) must not expose other tenants' data.
+                return retdata
 
         if not value:
             value = ''
@@ -341,6 +405,7 @@ class SpiderFootWebUi:
         Returns:
             bytes: scan logs in CSV format
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
 
         try:
@@ -380,6 +445,7 @@ class SpiderFootWebUi:
         Returns:
             str: results in CSV or Excel format
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
 
         try:
@@ -451,6 +517,7 @@ class SpiderFootWebUi:
         Returns:
             str: results in CSV or Excel format
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         data = dbh.scanResultEvent(id, type)
 
@@ -501,6 +568,7 @@ class SpiderFootWebUi:
         Returns:
             str: results in CSV or Excel format
         """
+        self._assertScanOwnerMulti(ids)
         dbh = SpiderFootDb(self.config)
         scaninfo = dict()
         data = list()
@@ -575,6 +643,7 @@ class SpiderFootWebUi:
         Returns:
             str: results in CSV or Excel format
         """
+        self._assertScanOwner(id)
         data = self.searchBase(id, eventType, value)
 
         if not data:
@@ -619,6 +688,7 @@ class SpiderFootWebUi:
         Returns:
             str: results in JSON format
         """
+        self._assertScanOwnerMulti(ids)
         dbh = SpiderFootDb(self.config)
         scaninfo = list()
         scan_name = ""
@@ -677,6 +747,7 @@ class SpiderFootWebUi:
         if not id:
             return None
 
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         data = dbh.scanResultEvent(id, filterFp=True)
         scan = dbh.scanInstanceGet(id)
@@ -720,6 +791,8 @@ class SpiderFootWebUi:
         if not ids:
             return None
 
+        self._assertScanOwnerMulti(ids)
+
         for id in ids.split(','):
             scan = dbh.scanInstanceGet(id)
             if not scan:
@@ -756,6 +829,7 @@ class SpiderFootWebUi:
         Returns:
             dict: scan options for the specified scan
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         ret = dict()
 
@@ -809,6 +883,7 @@ class SpiderFootWebUi:
         # Snapshot the current configuration to be used by the scan
         cfg = deepcopy(self.config)
         modlist = list()
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(cfg)
         info = dbh.scanInstanceGet(id)
 
@@ -839,6 +914,7 @@ class SpiderFootWebUi:
         # Start running a new scan
         scanId = SpiderFootHelpers.genScanInstanceId()
         try:
+            cfg['__scanuser__'] = cherrypy.session.get('user', {}).get('id') if hasattr(cherrypy, 'session') else None
             p = mp.Process(target=startSpiderFootScanner, args=(self.loggingQueue, scanname, scanId, scantarget, targetType, modlist, cfg))
             p.daemon = True
             p.start()
@@ -872,6 +948,8 @@ class SpiderFootWebUi:
         modlist = list()
         dbh = SpiderFootDb(cfg)
 
+        self._assertScanOwnerMulti(ids)
+
         for id in ids.split(","):
             info = dbh.scanInstanceGet(id)
             if not info:
@@ -897,6 +975,7 @@ class SpiderFootWebUi:
             # Start running a new scan
             scanId = SpiderFootHelpers.genScanInstanceId()
             try:
+                cfg['__scanuser__'] = cherrypy.session.get('user', {}).get('id') if hasattr(cherrypy, 'session') else None
                 p = mp.Process(target=startSpiderFootScanner, args=(self.loggingQueue, scanname, scanId, scantarget, targetType, modlist, cfg))
                 p.daemon = True
                 p.start()
@@ -950,6 +1029,7 @@ class SpiderFootWebUi:
         Returns:
             str: New scan page HTML pre-populated with options from cloned scan.
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         types = dbh.eventTypes()
         info = dbh.scanInstanceGet(id)
@@ -1224,6 +1304,7 @@ class SpiderFootWebUi:
         Returns:
             str: scan info page HTML
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         res = dbh.scanInstanceGet(id)
         if res is None:
@@ -1318,6 +1399,7 @@ class SpiderFootWebUi:
         if not id:
             return self.jsonify_error('404', "No scan specified")
 
+        self._assertScanOwnerMulti(id)
         dbh = SpiderFootDb(self.config)
         ids = id.split(',')
 
@@ -1472,6 +1554,7 @@ class SpiderFootWebUi:
         """
         cherrypy.response.headers['Content-Type'] = "application/json; charset=utf-8"
 
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
 
         if fp not in ["0", "1"]:
@@ -1749,6 +1832,7 @@ class SpiderFootWebUi:
         # Start running a new scan
         scanId = SpiderFootHelpers.genScanInstanceId()
         try:
+            cfg['__scanuser__'] = cherrypy.session.get('user', {}).get('id') if hasattr(cherrypy, 'session') else None
             p = mp.Process(target=startSpiderFootScanner, args=(self.loggingQueue, scanname, scanId, scantarget, targetType, modlist, cfg))
             p.daemon = True
             p.start()
@@ -1782,6 +1866,7 @@ class SpiderFootWebUi:
         if not id:
             return self.jsonify_error('404', "No scan specified")
 
+        self._assertScanOwnerMulti(id)
         dbh = SpiderFootDb(self.config)
         ids = id.split(',')
 
@@ -1835,6 +1920,7 @@ class SpiderFootWebUi:
         Returns:
             list: scan log
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         retdata = []
 
@@ -1861,6 +1947,7 @@ class SpiderFootWebUi:
         Returns:
             list: scan errors
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         retdata = []
 
@@ -1929,6 +2016,7 @@ class SpiderFootWebUi:
         Returns:
             list: scan status
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         data = dbh.scanInstanceGet(id)
 
@@ -1964,6 +2052,7 @@ class SpiderFootWebUi:
         Returns:
             list: scan summary
         """
+        self._assertScanOwner(id)
         retdata = []
 
         dbh = SpiderFootDb(self.config)
@@ -1997,6 +2086,7 @@ class SpiderFootWebUi:
         Returns:
             list: correlation result list
         """
+        self._assertScanOwner(id)
         retdata = []
 
         dbh = SpiderFootDb(self.config)
@@ -2025,6 +2115,7 @@ class SpiderFootWebUi:
         Returns:
             list: scan results
         """
+        self._assertScanOwner(id)
         retdata = []
 
         dbh = SpiderFootDb(self.config)
@@ -2068,6 +2159,7 @@ class SpiderFootWebUi:
         Returns:
             list: unique search results
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         retdata = []
 
@@ -2114,6 +2206,7 @@ class SpiderFootWebUi:
         if not id:
             return self.jsonify_error('404', "No scan specified")
 
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
 
         try:
@@ -2133,6 +2226,7 @@ class SpiderFootWebUi:
         Returns:
             dict
         """
+        self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
         pc = dict()
         datamap = dict()
