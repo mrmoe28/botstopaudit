@@ -1616,3 +1616,36 @@ class SpiderFootHelpers():
             host == domain or host.endswith("." + domain)
             for domain in SpiderFootHelpers._SHARED_INFRA_DOMAINS
         )
+
+    # CDN / reverse-proxy Server-header tokens. When one of these is the whole
+    # banner (with no version number), it discloses no software version, so
+    # flagging it as version disclosure is a false positive.
+    _CDN_SERVER_TOKENS = frozenset((
+        "cloudflare", "cloudfront", "akamaighost", "akamai", "fastly",
+        "sucuri/cloudproxy", "sucuri", "incapsula", "imperva", "varnish",
+        "cachefly", "stackpath", "keycdn", "bunnycdn", "gws", "esf",
+    ))
+
+    @staticmethod
+    def isCdnServerBanner(banner: str) -> bool:
+        """Return True if a web-server banner is a CDN/proxy name with no version.
+
+        A ``Server: cloudflare`` header (etc.) reveals no software version, so
+        treating it as a version-disclosure finding is a false positive. A banner
+        that contains a version number (e.g. ``nginx/1.14.0``) is not matched.
+
+        Args:
+            banner (str): the Server-header / banner value
+
+        Returns:
+            bool: True if the banner is a CDN/proxy identifier without a version
+        """
+        if not banner:
+            return False
+        b = banner.strip().lower()
+        # A genuine version disclosure carries a version number.
+        if re.search(r"\d+\.\d+", b) or re.search(r"/\s*\d", b):
+            return False
+        token = re.split(r"[\s/;,]", b, maxsplit=1)[0]
+        return b in SpiderFootHelpers._CDN_SERVER_TOKENS \
+            or token in SpiderFootHelpers._CDN_SERVER_TOKENS

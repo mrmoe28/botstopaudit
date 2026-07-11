@@ -333,6 +333,41 @@ class TestCDNSuppression(unittest.TestCase):
             with self.subTest(host=host):
                 self.assertEqual(SpiderFootHelpers.isSharedInfraHost(host), want)
 
+    def test_isCdnServerBanner(self):
+        expected = {
+            "cloudflare": True,
+            "CloudFront": True,
+            "AkamaiGHost": True,
+            "sucuri/cloudproxy": True,
+            # Real version disclosures must NOT be treated as CDN banners.
+            "nginx/1.14.0": False,
+            "Apache/2.4.51 (Ubuntu)": False,
+            "cloudflare-nginx/1.2": False,
+            "nginx": False,
+            "": False,
+        }
+        for banner, want in expected.items():
+            with self.subTest(banner=banner):
+                self.assertEqual(SpiderFootHelpers.isCdnServerBanner(banner), want)
+
+    def test_webserver_banner_cdn_suppressed(self):
+        p = self._plugin()
+        root = SpiderFootEvent("ROOT", "cinecastpro.com", "", None)
+        src = SpiderFootEvent("LINKED_URL_INTERNAL", "https://cinecastpro.com/",
+                              "sfp_webserver", root)
+        evt = SpiderFootEvent("WEBSERVER_BANNER", "cloudflare", "sfp_webserver", src)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 1)
+
+    def test_webserver_banner_real_version_kept(self):
+        p = self._plugin()
+        root = SpiderFootEvent("ROOT", "example.com", "", None)
+        src = SpiderFootEvent("LINKED_URL_INTERNAL", "https://example.com/",
+                              "sfp_webserver", root)
+        evt = SpiderFootEvent("WEBSERVER_BANNER", "Apache/2.4.51", "sfp_webserver", src)
+        p._markSharedInfraFalsePositive(evt)
+        self.assertEqual(evt.false_positive, 0)
+
     def test_namecheaphosting_ns_flagged_via_shared_infra_list(self):
         # Not a tagged PROVIDER and not on a CDN, but a known shared-infra domain.
         p = self._plugin(resolves={"dns1.namecheaphosting.com": ["162.255.119.1"]})
