@@ -546,12 +546,12 @@ class SpiderFootPlugin():
                     or self._isProviderInfra(host)
                     or SpiderFootHelpers.isSharedInfraHost(host)):
                 sfEvent.false_positive = 1
-        elif etype == "WEBSERVER_BANNER":
+        elif (etype == "WEBSERVER_BANNER"
+                and SpiderFootHelpers.isCdnServerBanner(sfEvent.data)):
             # A Server header that is just a CDN/proxy name (e.g. "cloudflare")
             # discloses no software version, so it is not a version-disclosure
             # risk — treat it as a false positive.
-            if SpiderFootHelpers.isCdnServerBanner(sfEvent.data):
-                sfEvent.false_positive = 1
+            sfEvent.false_positive = 1
 
     @staticmethod
     def _extractHost(sfEvent) -> str:
