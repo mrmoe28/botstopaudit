@@ -360,6 +360,10 @@ class SpiderFootCorrelator:
             return None
 
         query_args['instanceId'] = self.scanId
+        # Exclude suppressed false positives (e.g. shared-infra/CDN findings) so
+        # they cannot generate risk correlations. Finalization marks these before
+        # correlations run, keeping the risk matrix consistent with the exposure score.
+        query_args['filterFp'] = True
         self.log.debug(f"db query: {query_args}")
         for row in self.dbh.scanResultEvent(**query_args):
             events[row[8]] = {

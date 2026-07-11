@@ -327,7 +327,9 @@ class SpiderFootWebUi:
         }
 
         try:
-            data = dbh.search(criteria)
+            # Exclude suppressed false positives so search and search-exports
+            # stay consistent with the assessment (exposure score / risk matrix).
+            data = dbh.search(criteria, filterFp=True)
         except Exception:
             return retdata
 
@@ -519,7 +521,7 @@ class SpiderFootWebUi:
         """
         self._assertScanOwner(id)
         dbh = SpiderFootDb(self.config)
-        data = dbh.scanResultEvent(id, type)
+        data = dbh.scanResultEvent(id, type, filterFp=True)
 
         if filetype.lower() in ["xlsx", "excel"]:
             rows = []
@@ -579,7 +581,7 @@ class SpiderFootWebUi:
             if scaninfo[id] is None:
                 continue
             scan_name = scaninfo[id][0]
-            data = data + dbh.scanResultEvent(id)
+            data = data + dbh.scanResultEvent(id, filterFp=True)
 
         if not data:
             return None
@@ -701,7 +703,7 @@ class SpiderFootWebUi:
 
             scan_name = scan[0]
 
-            for row in dbh.scanResultEvent(id):
+            for row in dbh.scanResultEvent(id, filterFp=True):
                 lastseen = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(row[0]))
                 event_data = str(row[1]).replace("<SFURL>", "").replace("</SFURL>", "")
                 source_data = str(row[2])
@@ -2234,7 +2236,7 @@ class SpiderFootWebUi:
 
         # Get the events we will be tracing back from
         try:
-            leafSet = dbh.scanResultEvent(id, eventType)
+            leafSet = dbh.scanResultEvent(id, eventType, filterFp=True)
             [datamap, pc] = dbh.scanElementSourcesAll(id, leafSet)
         except Exception:
             return retdata

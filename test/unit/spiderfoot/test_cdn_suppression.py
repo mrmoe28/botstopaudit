@@ -430,6 +430,61 @@ class TestCDNSuppression(unittest.TestCase):
             if os.path.exists(path):
                 os.unlink(path)
 
+    def _fp_result_fixture(self):
+        """Build a temp DB scan with one genuine and one suppressed finding.
+
+        Returns:
+            tuple: (SpiderFootDb, scan_id, db_path)
+        """
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        os.unlink(path)
+        opts = {"__database": path, "__dbtype": "sqlite"}
+        db = SpiderFootDb(opts, init=True)
+        scan_id = "FPRESULT01"
+        db.scanInstanceCreate(scan_id, "fp-result-test", "example.com")
+        root = SpiderFootEvent("ROOT", "example.com", "", None)
+        db.scanEventStore(scan_id, root)
+        real = SpiderFootEvent("MALICIOUS_IPADDR", "bad [203.0.113.9]", "sfp_test", root)
+        real.confidence = 100
+        cdn = SpiderFootEvent("MALICIOUS_IPADDR", "bad [185.199.110.22]", "sfp_test", root)
+        cdn.confidence = 100
+        cdn.false_positive = 1
+        db.scanEventStore(scan_id, real)
+        db.scanEventStore(scan_id, cdn)
+        return db, scan_id, path
+
+    def test_scanResultEvent_filterFp_excludes_false_positives(self):
+        """Exports/correlations/viz rely on scanResultEvent(filterFp=True)."""
+        db, scan_id, path = self._fp_result_fixture()
+        try:
+            data_str = str(db.scanResultEvent(scan_id, "MALICIOUS_IPADDR", filterFp=True))
+            self.assertIn("203.0.113.9", data_str)
+            self.assertNotIn("185.199.110.22", data_str)
+
+            # Without the filter, both are returned (default behaviour unchanged).
+            all_str = str(db.scanResultEvent(scan_id, "MALICIOUS_IPADDR"))
+            self.assertIn("203.0.113.9", all_str)
+            self.assertIn("185.199.110.22", all_str)
+        finally:
+            if os.path.exists(path):
+                os.unlink(path)
+
+    def test_search_filterFp_excludes_false_positives(self):
+        """search(filterFp=True) backs the search UI and search-exports."""
+        db, scan_id, path = self._fp_result_fixture()
+        try:
+            criteria = {"scan_id": scan_id, "type": "", "value": "%bad%", "regex": ""}
+            filtered = str(db.search(criteria, filterFp=True))
+            self.assertIn("203.0.113.9", filtered)
+            self.assertNotIn("185.199.110.22", filtered)
+
+            unfiltered = str(db.search(criteria))
+            self.assertIn("185.199.110.22", unfiltered)
+        finally:
+            if os.path.exists(path):
+                os.unlink(path)
+
     def _finalize_fixture(self, num_cohosts):
         """Build a temp DB scan with co-hosts and target/affiliate IP findings.
 
