@@ -466,6 +466,37 @@ class TestCDNSuppression(unittest.TestCase):
             if os.path.exists(path):
                 os.unlink(path)
 
+    def test_summary_excludes_false_positives(self):
+        # The Summary tab and Plain-English Report are built from
+        # scanResultSummary; suppressed findings must not inflate its counts.
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        os.unlink(path)
+        try:
+            db = SpiderFootDb({"__database": path}, init=True)
+            scan_id = "SUMMARYFP1"
+            db.scanInstanceCreate(scan_id, "summary-fp", "example.com")
+            root = SpiderFootEvent("ROOT", "example.com", "", None)
+            db.scanEventStore(scan_id, root)
+            # 3 MALICIOUS_IPADDR: two suppressed (CDN false positives), one real.
+            for i, fp in enumerate((1, 1, 0)):
+                e = SpiderFootEvent("MALICIOUS_IPADDR", f"Feed [203.0.113.{i}]",
+                                    "sfp_x", root)
+                e.false_positive = fp
+                db.scanEventStore(scan_id, e)
+
+            # Default (filterFp=True): only the non-suppressed finding counts.
+            summ = {r[0]: r[3] for r in db.scanResultSummary(scan_id, "type")}
+            self.assertEqual(summ.get("MALICIOUS_IPADDR"), 1)
+
+            # filterFp=False preserves the raw count of all three.
+            raw = {r[0]: r[3]
+                   for r in db.scanResultSummary(scan_id, "type", filterFp=False)}
+            self.assertEqual(raw.get("MALICIOUS_IPADDR"), 3)
+        finally:
+            if os.path.exists(path):
+                os.unlink(path)
+
 
 if __name__ == "__main__":
     unittest.main()

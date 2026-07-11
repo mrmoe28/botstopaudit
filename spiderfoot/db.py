@@ -801,12 +801,14 @@ class SpiderFootDb:
             except sqlite3.Error as e:
                 raise IOError("SQL error encountered when retrieving scan instance") from e
 
-    def scanResultSummary(self, instanceId: str, by: str = "type") -> list:
+    def scanResultSummary(self, instanceId: str, by: str = "type", filterFp: bool = True) -> list:
         """Obtain a summary of the results, filtered by event type, module or entity.
 
         Args:
             instanceId (str): scan instance ID
             by (str): filter by type
+            filterFp (bool): exclude findings marked as false positives (default),
+                so the summary/report match the exposure score and Browse view.
 
         Returns:
             list: scan instance info
@@ -826,23 +828,25 @@ class SpiderFootDb:
         if by not in ["type", "module", "entity"]:
             raise ValueError(f"Invalid filter by value: {by}") from None
 
+        fp = " AND r.false_positive <> 1" if filterFp else ""
+
         if by == "type":
             qry = "SELECT r.type, e.event_descr, MAX(ROUND(generated)) AS last_in, \
                 count(*) AS total, count(DISTINCT r.data) as utotal FROM \
                 tbl_scan_results r, tbl_event_types e WHERE e.event = r.type \
-                AND r.scan_instance_id = ? GROUP BY r.type ORDER BY e.event_descr"
+                AND r.scan_instance_id = ?" + fp + " GROUP BY r.type ORDER BY e.event_descr"
 
         if by == "module":
             qry = "SELECT r.module, '', MAX(ROUND(generated)) AS last_in, \
                 count(*) AS total, count(DISTINCT r.data) as utotal FROM \
                 tbl_scan_results r, tbl_event_types e WHERE e.event = r.type \
-                AND r.scan_instance_id = ? GROUP BY r.module ORDER BY r.module DESC"
+                AND r.scan_instance_id = ?" + fp + " GROUP BY r.module ORDER BY r.module DESC"
 
         if by == "entity":
             qry = "SELECT r.data, e.event_descr, MAX(ROUND(generated)) AS last_in, \
                 count(*) AS total, count(DISTINCT r.data) as utotal FROM \
                 tbl_scan_results r, tbl_event_types e WHERE e.event = r.type \
-                AND r.scan_instance_id = ? \
+                AND r.scan_instance_id = ?" + fp + " \
                 AND e.event_type in ('ENTITY') \
                 GROUP BY r.data, e.event_descr ORDER BY total DESC limit 50"
 
